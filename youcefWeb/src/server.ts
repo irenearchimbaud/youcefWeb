@@ -6,23 +6,40 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import { envoyerMail } from './mail';
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
+app.use('/api', express.json({ limit: '10kb' }));
+
 /**
- * Example Express Rest API endpoints can be defined here.
- * Uncomment and define endpoints as necessary.
- *
- * Example:
- * ```ts
- * app.get('/api/{*splat}', (req, res) => {
- *   // Handle API request
- * });
- * ```
+ * Une demande de rendez-vous déposée par un client est transmise par mail à Youcef.
  */
+app.post('/api/demandes', async (req, res) => {
+  const { nom, offre, message } = req.body ?? {};
+  const valide = (v: unknown, max: number): v is string =>
+    typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+
+  if (!valide(nom, 100) || !valide(offre, 100) || !valide(message, 2000)) {
+    res.status(400).json({ erreur: 'Demande invalide.' });
+    return;
+  }
+
+  try {
+    await envoyerMail({
+      to: process.env['MAIL_TO'] ?? 'youcef@example.com',
+      subject: `Nouvelle demande de rendez-vous : ${nom.trim()}`,
+      text: `${nom.trim()} souhaite un rendez-vous.\n\nAccompagnement : ${offre}\n\n${message.trim()}`,
+    });
+    res.status(201).json({ ok: true });
+  } catch (e) {
+    console.error('Échec de l\'envoi du mail', e);
+    res.status(502).json({ erreur: 'Le mail n\'a pas pu être envoyé.' });
+  }
+});
 
 /**
  * Serve static files from /browser

@@ -1,1 +1,240 @@
-/* You can add global styles to this file, and also import other style files */
+:root {
+  --bleu-profond: #0a1d35;
+  --bleu-nuit: #112a4a;
+  --ivoire: #f2e8dc;
+  --ivoire-clair: #faf6f0;
+  --bleu-clair: #6caed6;
+  --champagne: #d9c9b4;
+  --champagne-fonce: #b79f7f;
+  --bleu-diamant: #d0e7f5;
+  --blanc: #ffffff;
+  --texte: #1c2e45;
+  --texte-doux: #5a6a7f;
+  --danger: #a83a2a;
+  --succes: #2b7a58;
+
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --sans: "Inter", "Segoe UI", -apple-system, Roboto, Helvetica, Arial, sans-serif;
+  --ombre: 0 1px 2px rgba(10, 29, 53, 0.06), 0 8px 28px rgba(10, 29, 53, 0.08);
+  --ombre-forte: 0 2px 4px rgba(10, 29, 53, 0.08), 0 20px 50px rgba(10, 29, 53, 0.16);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5.5rem;
+}
+
+body {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 1rem;
+  background: var(--ivoire-clair);
+  color: var(--texte);
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4, strong, blockquote, .numero, .pastille, .avatar {
+  font-variant-numeric: lining-nums;
+}
+
+h1, h2, h3 {
+  font-family: var(--serif);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  color: var(--bleu-profond);
+  margin: 0 0 0.5em;
+}
+
+h1 { font-size: clamp(2.8rem, 6vw, 4.6rem); }
+h2 { font-size: clamp(2rem, 4vw, 3rem); }
+h3 { font-size: 1.6rem; }
+
+p { margin: 0 0 1em; }
+
+a { color: inherit; }
+
+em { font-style: italic; color: var(--champagne-fonce); }
+
+:focus-visible {
+  outline: 3px solid var(--bleu-clair);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.conteneur {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 1.5rem;
+}
+
+.sur-titre {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--champagne-fonce);
+  margin-bottom: 1rem;
+}
+
+/* Logo recadré sur le cercle */
+.logo {
+  display: block;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: #fff url('/logo.webp') center / 158% no-repeat;
+}
+
+/* Boutons */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.85rem 1.7rem;
+  border-radius: 999px;
+  border: 1.5px solid var(--bleu-profond);
+  background: var(--bleu-profond);
+  color: var(--ivoire-clair);
+  font: 600 0.95rem var(--sans);
+  letter-spacing: 0.01em;
+  text-decoration: none;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s, background 0.2s, color 0.2s;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(10, 29, 53, 0.22);
+    background: var(--bleu-nuit);
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  &.secondaire {
+    background: transparent;
+    color: var(--bleu-profond);
+
+    &:hover {
+      background: var(--bleu-profond);
+      color: var(--ivoire-clair);
+    }
+  }
+
+  &.clair {
+    background: var(--ivoire-clair);
+    border-color: var(--ivoire-clair);
+    color: var(--bleu-profond);
+
+    &:hover {
+      background: var(--bleu-diamant);
+      border-color: var(--bleu-diamant);
+    }
+  }
+
+  &.contour-clair {
+    background: transparent;
+    border-color: rgba(250, 246, 240, 0.5);
+    color: var(--ivoire-clair);
+
+    &:hover {
+      background: rgba(250, 246, 240, 0.12);
+      border-color: var(--ivoire-clair);
+    }
+  }
+
+  &.petit {
+    padding: 0.5rem 1.1rem;
+    font-size: 0.85rem;
+  }
+
+  &.large {
+    width: 100%;
+  }
+}
+
+/* Cartes et formulaires */
+.carte {
+  background: var(--blanc);
+  border: 1px solid rgba(10, 29, 53, 0.07);
+  border-radius: 20px;
+  padding: 1.75rem;
+  box-shadow: var(--ombre);
+}
+
+label {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--bleu-profond);
+  margin: 1.1rem 0 0.4rem;
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 0.8rem 1rem;
+  border: 1.5px solid var(--champagne);
+  border-radius: 12px;
+  font: inherit;
+  color: var(--texte);
+  background: var(--ivoire-clair);
+  transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: var(--bleu-clair);
+    box-shadow: 0 0 0 4px rgba(108, 174, 214, 0.25);
+    background: var(--blanc);
+  }
+}
+
+textarea { resize: vertical; }
+
+/* Badges de statut et avatars */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: var(--bleu-diamant);
+  color: var(--bleu-nuit);
+
+  &.acceptee { background: #d6eee2; color: var(--succes); }
+  &.refusee { background: #f6dcd6; color: var(--danger); }
+}
+
+.avatar {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--bleu-clair), var(--bleu-diamant));
+  color: var(--bleu-profond);
+  font-family: var(--serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+@keyframes monte {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  * { animation: none !important; transition: none !important; }
+}
