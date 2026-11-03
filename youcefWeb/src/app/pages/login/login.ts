@@ -11,30 +11,30 @@ import { AuthService } from '../../core/auth.service';
       <aside class="panneau" aria-hidden="true">
         <span class="logo"></span>
         <blockquote>« Se retrouver, c'est déjà commencer à avancer. »</blockquote>
-        <p>Votre espace personnel : vos documents, vos demandes de rendez-vous, en toute confidentialité.</p>
+        <p>Votre espace personnel : vos documents, vos séances, en toute confidentialité.</p>
       </aside>
 
       <section class="formulaire">
         <form (ngSubmit)="valider()">
           <span class="sur-titre">Espace membre</span>
           <h1>Bon retour</h1>
-          <p class="intro">Connectez-vous pour accéder à votre espace.</p>
+          <p class="intro">Utilisez l'identifiant et le code d'accès remis par Youcef.</p>
 
           <label for="id">Identifiant</label>
           <input id="id" name="id" [(ngModel)]="identifiant" autocomplete="username" required />
 
-          <label for="pwd">Mot de passe</label>
-          <input id="pwd" name="pwd" type="password" [(ngModel)]="motDePasse" autocomplete="current-password" required />
+          <label for="code">Code d'accès</label>
+          <input id="code" name="code" type="password" [(ngModel)]="code" autocomplete="current-password" required />
 
           @if (erreur()) {
-            <p class="erreur" role="alert">Identifiant ou mot de passe incorrect.</p>
+            <p class="erreur" role="alert">Identifiant ou code incorrect.</p>
           }
 
           <button class="btn large" type="submit">Se connecter</button>
 
           <div class="demo">
             <span>Comptes de démonstration</span>
-            <button type="button" (click)="remplir('marie', 'client123')">Espace client</button>
+            <button type="button" (click)="remplir('marie-dupont', 'K7M2-QX9P')">Espace client</button>
             <button type="button" (click)="remplir('youcef', 'pro123')">Espace Youcef</button>
           </div>
 
@@ -116,16 +116,16 @@ export class Login {
   private readonly auth = inject(AuthService);
 
   protected identifiant = '';
-  protected motDePasse = '';
+  protected code = '';
   protected readonly erreur = signal(false);
 
-  protected remplir(identifiant: string, motDePasse: string): void {
+  protected remplir(identifiant: string, code: string): void {
     this.identifiant = identifiant;
-    this.motDePasse = motDePasse;
+    this.code = code;
     this.erreur.set(false);
   }
 
   protected valider(): void {
-    this.erreur.set(!this.auth.connexion(this.identifiant, this.motDePasse));
+    this.erreur.set(!this.auth.connexion(this.identifiant, this.code));
   }
 }
