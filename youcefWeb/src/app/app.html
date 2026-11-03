@@ -1,64 +1,62 @@
 <header>
-  <div class="conteneur barre">
-    <a routerLink="/" class="marque" aria-label="Youcef Tahri, accueil">
-      <span class="logo"></span>
-      <span class="nom">Youcef Tahri<small>Coaching</small></span>
-    </a>
-
-    <nav aria-label="Navigation principale">
-      <a routerLink="/" fragment="approche" class="lien">Approche</a>
-      <a routerLink="/" fragment="accompagnements" class="lien">Accompagnements</a>
-      <a routerLink="/" fragment="parcours" class="lien">Parcours</a>
-    </nav>
-
-    <div class="compte">
-      @if (auth.utilisateur(); as u) {
-        <a [routerLink]="auth.espaceDe(u)" class="profil" title="Mon espace">
-          <span class="avatar">{{ u.nom.charAt(0) }}</span>
-          <span class="prenom">{{ u.nom.split(' ')[0] }}</span>
+    <div class="conteneur barre">
+        <a routerLink="/" class="marque" aria-label="Youcef Tahri, accueil">
+            <span class="logo"></span>
+            <span class="nom">Synego<small>Coaching</small></span>
         </a>
-        <button class="btn secondaire petit" (click)="auth.deconnexion()">Déconnexion</button>
-      } @else {
-        <a routerLink="/login" class="btn petit">Espace membre</a>
-      }
+
+        <nav aria-label="Navigation principale">
+            <a routerLink="/" fragment="approche" class="lien">Approche</a>
+            <a routerLink="/" fragment="accompagnements" class="lien">Accompagnements</a>
+            <a routerLink="/" fragment="parcours" class="lien">Parcours</a>
+        </nav>
+
+        <div class="compte">
+            @if (auth.utilisateur(); as u) {
+            <a [routerLink]="auth.espaceDe(u)" class="profil" title="Mon espace">
+                <span class="avatar">{{ u.nom.charAt(0) }}</span>
+                <span class="prenom">{{ u.nom.split(' ')[0] }}</span>
+            </a>
+            <button class="btn secondaire petit" (click)="auth.deconnexion()">Déconnexion</button> } @else {
+            <a routerLink="/login" class="btn petit">Espace membre</a> }
+        </div>
     </div>
-  </div>
 </header>
 
 <main>
-  <router-outlet />
+    <router-outlet />
 </main>
 
 <footer>
-  <div class="conteneur grille">
-    <div class="identite">
-      <span class="logo"></span>
-      <div>
-        <strong>Youcef Tahri</strong>
-        <p>Coach en développement personnel et formateur en gestion interpersonnelle.</p>
-      </div>
+    <div class="conteneur grille">
+        <div class="identite">
+            <span class="logo"></span>
+            <div>
+                <strong>Youcef Tahri</strong>
+                <p>Coach en développement personnel et formateur en gestion interpersonnelle.</p>
+            </div>
+        </div>
+        <div>
+            <h4>Accompagnement</h4>
+            <a routerLink="/" fragment="approche">Mon approche</a>
+            <a routerLink="/" fragment="accompagnements">Les accompagnements</a>
+            <a routerLink="/" fragment="parcours">Le parcours</a>
+        </div>
+        <div>
+            <h4>Informations</h4>
+            <span>Séances en visio uniquement</span>
+            <span>Suivi de trois mois minimum</span>
+            <span>Échanges confidentiels</span>
+        </div>
     </div>
-    <div>
-      <h4>Accompagnement</h4>
-      <a routerLink="/" fragment="approche">Mon approche</a>
-      <a routerLink="/" fragment="accompagnements">Les accompagnements</a>
-      <a routerLink="/" fragment="parcours">Le parcours</a>
-    </div>
-    <div>
-      <h4>Informations</h4>
-      <span>Séances en visio uniquement</span>
-      <span>Suivi de trois mois minimum</span>
-      <span>Échanges confidentiels</span>
-    </div>
-  </div>
-  <div class="conteneur bas">
-    <span>© 2026 Youcef Tahri · Tous droits réservés</span>
-    <span class="mentions">
+    <div class="conteneur bas">
+        <span>© 2026 Youcef Tahri · Tous droits réservés</span>
+        <span class="mentions">
       <a routerLink="/mentions-legales">Mentions légales</a>
       <span>·</span>
-      <a routerLink="/politique-confidentialite">Politique de confidentialité</a>
-      <span>·</span>
-      <a routerLink="/conditions-generales">Conditions générales</a>
-    </span>
-  </div>
+        <a routerLink="/politique-confidentialite">Politique de confidentialité</a>
+        <span>·</span>
+        <a routerLink="/conditions-generales">Conditions générales</a>
+        </span>
+    </div>
 </footer>
