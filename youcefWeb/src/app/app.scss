@@ -149,10 +149,33 @@ footer {
   a:hover { color: var(--bleu-diamant); }
 
   .bas {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
     padding-block: 1.4rem;
     border-top: 1px solid rgba(250, 246, 240, 0.12);
     font-size: 0.82rem;
     color: rgba(250, 246, 240, 0.5);
+
+    .mentions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(250, 246, 240, 0.7);
+      text-align: right;
+
+      a, span {
+        display: inline;
+        margin: 0;
+      }
+
+      a {
+        color: inherit;
+      }
+    }
   }
 }
 
@@ -160,4 +183,10 @@ footer {
   nav { display: none; }
   .prenom { display: none; }
   footer .grille { grid-template-columns: 1fr; gap: 2rem; }
+  footer .bas {
+    flex-direction: column;
+    align-items: flex-start;
+
+    .mentions { text-align: left; }
+  }
 }
