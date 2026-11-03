@@ -4,6 +4,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../core/auth.service';
 import { CALENDLY_URL } from '../../core/config';
 import { DataService } from '../../core/data.service';
+import { Rdv, chargerRdv, formaterCreneau } from '../../core/models';
 
 @Component({
   selector: 'app-espace-client',
@@ -14,7 +15,7 @@ import { DataService } from '../../core/data.service';
         <h1>Bonjour {{ prenom() }}</h1>
         <div class="stats">
           <div><strong>{{ utilisateur().solde }}</strong><span>séance(s) restante(s)</span></div>
-          <div><strong>{{ reservations().length }}</strong><span>séance(s) réservée(s)</span></div>
+          <div><strong>{{ rdv().length }}</strong><span>séance(s) à venir</span></div>
           <div><strong>{{ documents().length }}</strong><span>documents</span></div>
         </div>
       </div>
@@ -41,16 +42,18 @@ import { DataService } from '../../core/data.service';
 
         <section class="carte">
           <h2>Mes séances</h2>
-          @for (r of reservations(); track r.id) {
+          @for (r of rdv(); track r.id) {
             <div class="ligne">
               <div class="infos">
-                <strong>Séance réservée le {{ r.date }}</strong>
-                <small>Date et lien de visio dans votre e-mail de confirmation</small>
+                <strong>{{ creneau(r.debut, r.fin) }}</strong>
+                <small>{{ r.titre }}</small>
               </div>
-              <span class="badge acceptee">confirmée</span>
+              @if (r.lien) {
+                <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">Rejoindre</a>
+              }
             </div>
           } @empty {
-            <p class="vide">Vous n'avez pas encore réservé de séance.</p>
+            <p class="vide">{{ erreurRdv() ? "Vos rendez-vous n'ont pas pu être chargés." : "Vous n'avez aucune séance à venir." }}</p>
           }
         </section>
       </div>
@@ -144,7 +147,9 @@ export class EspaceClient {
   protected readonly utilisateur = computed(() => this.auth.utilisateur()!);
   protected readonly prenom = computed(() => this.utilisateur().nom.split(' ')[0]);
   protected readonly documents = computed(() => this.data.documentsDe(this.utilisateur().id));
-  protected readonly reservations = computed(() => this.data.reservationsDe(this.utilisateur().id));
+  protected readonly rdv = signal<Rdv[]>([]);
+  protected readonly erreurRdv = signal(false);
+  protected readonly creneau = formaterCreneau;
   protected readonly retour = signal('');
 
   /** Widget Calendly (navigateur uniquement), pré-rempli avec le nom du client. */
@@ -155,19 +160,31 @@ export class EspaceClient {
       embed_type: 'Inline',
       hide_gdpr_banner: '1',
       name: this.utilisateur().nom,
+      utm_content: this.utilisateur().id,
     });
     return this.sanitizer.bypassSecurityTrustResourceUrl(`${CALENDLY_URL}?${params}`);
   });
 
   constructor() {
     if (!this.navigateur) return;
-    // Calendly prévient la page parente une fois la réservation faite : on décompte alors une séance.
+    void this.charger();
+    // Calendly prévient la page parente une fois la réservation faite : on décompte une séance et on rafraîchit la liste.
     const ecouteur = (e: MessageEvent) => {
       if (e.origin !== 'https://calendly.com' || e.data?.event !== 'calendly.event_scheduled') return;
-      this.data.enregistrerReservation(this.utilisateur().id);
-      this.retour.set("Séance réservée : elle apparaît dans l'agenda de Youcef, et un e-mail de confirmation vous est envoyé.");
+      this.data.consommerSeance(this.utilisateur().id);
+      this.retour.set('Séance réservée : une confirmation vous est envoyée par e-mail.');
+      void this.charger(true);
     };
     window.addEventListener('message', ecouteur);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('message', ecouteur));
+  }
+
+  private async charger(frais = false): Promise<void> {
+    try {
+      this.rdv.set((await chargerRdv(this.utilisateur().id, frais)).rdv);
+      this.erreurRdv.set(false);
+    } catch {
+      this.erreurRdv.set(true);
+    }
   }
 }

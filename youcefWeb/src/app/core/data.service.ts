@@ -1,10 +1,9 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
-import { Document, Reservation, Utilisateur } from './models';
+import { Document, Utilisateur } from './models';
 
 const CLES = {
   utilisateurs: 'youcef-utilisateurs',
-  reservations: 'youcef-reservations',
 };
 
 // Données de démonstration, en attendant la base SQL.
@@ -39,7 +38,6 @@ export class DataService {
 
   readonly utilisateurs = signal<Utilisateur[]>(this.lire(CLES.utilisateurs, UTILISATEURS));
   readonly documents = signal<Document[]>(DOCUMENTS);
-  readonly reservations = signal<Reservation[]>(this.lire(CLES.reservations, []));
 
   clients(): Utilisateur[] {
     return this.utilisateurs().filter((u) => u.role === 'client');
@@ -51,10 +49,6 @@ export class DataService {
 
   documentsDe(clientId: string): Document[] {
     return this.documents().filter((d) => d.clientId === clientId);
-  }
-
-  reservationsDe(clientId: string): Reservation[] {
-    return this.reservations().filter((r) => r.clientId === clientId);
   }
 
   // --- Clients (gérés par Youcef) ---
@@ -71,7 +65,6 @@ export class DataService {
   supprimerClient(id: string): void {
     this.majUtilisateurs(this.utilisateurs().filter((u) => u.id !== id));
     this.documents.update((l) => l.filter((d) => d.clientId !== id));
-    this.majReservations(this.reservations().filter((r) => r.clientId !== id));
   }
 
   ajusterSolde(id: string, delta: number): void {
@@ -82,23 +75,14 @@ export class DataService {
     this.majUtilisateurs(this.utilisateurs().map((u) => (u.id === id ? { ...u, code: genererCode() } : u)));
   }
 
-  // --- Séances réservées via Calendly ---
-
-  /** Enregistre une séance réservée et la décompte du solde du client. */
-  enregistrerReservation(clientId: string): void {
-    const r: Reservation = { id: crypto.randomUUID(), clientId, date: new Date().toISOString().slice(0, 10) };
+  /** Décompte une séance du solde (appelé quand le client vient de réserver via Calendly). */
+  consommerSeance(clientId: string): void {
     this.ajusterSolde(clientId, -1);
-    this.majReservations([r, ...this.reservations()]);
   }
 
   private majUtilisateurs(liste: Utilisateur[]): void {
     this.utilisateurs.set(liste);
     this.ecrire(CLES.utilisateurs, liste);
-  }
-
-  private majReservations(liste: Reservation[]): void {
-    this.reservations.set(liste);
-    this.ecrire(CLES.reservations, liste);
   }
 
   private ecrire(cle: string, valeur: unknown): void {

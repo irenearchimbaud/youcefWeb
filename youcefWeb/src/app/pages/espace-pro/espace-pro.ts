@@ -1,11 +1,8 @@
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute } from '@angular/router';
 import { DataService } from '../../core/data.service';
-import { Utilisateur } from '../../core/models';
-
-interface Rdv { id: string; titre: string; debut: string; fin: string; lien?: string; visio?: string }
+import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models';
 
 @Component({
   selector: 'app-espace-pro',
@@ -17,7 +14,6 @@ interface Rdv { id: string; titre: string; debut: string; fin: string; lien?: st
         <h1>Bonjour Youcef</h1>
         <div class="stats">
           <div><strong>{{ rdv().length }}</strong><span>rendez-vous à venir</span></div>
-          <div><strong>{{ data.reservations().length }}</strong><span>séances réservées</span></div>
           <div><strong>{{ clients().length }}</strong><span>clients</span></div>
         </div>
       </div>
@@ -28,66 +24,33 @@ interface Rdv { id: string; titre: string; debut: string; fin: string; lien?: st
         <section class="carte">
           <h2>Prochains rendez-vous</h2>
           <p class="aide">
-            Les séances réservées par vos clients via Calendly arrivent directement dans votre Google Agenda.
+            Les séances réservées par vos clients via Calendly apparaissent ici automatiquement.
             Vos disponibilités se règlent dans Calendly.
           </p>
-          @if (google()?.connecte) {
+          @if (configure() === false) {
+            <p class="vide">
+              Calendly n'est pas encore relié au serveur : définissez la variable <code>CALENDLY_TOKEN</code>.
+            </p>
+          } @else {
             @for (r of rdv(); track r.id) {
               <article class="demande">
-                <span class="avatar">{{ r.titre.charAt(0) }}</span>
+                <span class="avatar">{{ nomClient(r).charAt(0) }}</span>
                 <div class="corps">
-                  <strong>{{ r.titre }}</strong>
-                  <small>{{ horaire(r) }}</small>
+                  <strong>{{ nomClient(r) }}</strong>
+                  <small>{{ creneau(r.debut, r.fin) }}</small>
                 </div>
-                <div class="actions">
-                  @if (r.visio) {
-                    <a class="btn petit" [href]="r.visio" target="_blank" rel="noopener">Visio</a>
-                  }
-                  @if (r.lien) {
-                    <a class="btn secondaire petit" [href]="r.lien" target="_blank" rel="noopener">Agenda</a>
-                  }
-                </div>
+                @if (r.lien) {
+                  <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">Rejoindre</a>
+                }
               </article>
             } @empty {
-              <p class="vide">Aucun rendez-vous à venir.</p>
+              <p class="vide">{{ erreurAgenda() ? "Les rendez-vous n'ont pas pu être chargés." : 'Aucun rendez-vous à venir.' }}</p>
             }
-            @if (erreurAgenda()) {
-              <p class="erreur" role="alert">L'agenda n'a pas pu être lu pour le moment.</p>
-            }
-          } @else {
-            <p class="vide">Connectez votre Google Agenda pour afficher vos rendez-vous ici.</p>
           }
         </section>
       </div>
 
       <div class="colonne">
-        <section class="carte">
-          <h2>Google Agenda</h2>
-          @if (retourGoogle() === 'ok') {
-            <p class="succes" role="status">Agenda connecté.</p>
-          } @else if (retourGoogle() === 'erreur') {
-            <p class="erreur" role="alert">La connexion à Google a échoué, merci de réessayer.</p>
-          }
-          @if (google() === null) {
-            <p class="vide">Vérification…</p>
-          } @else if (!google()!.configure) {
-            <p class="aide">
-              Les identifiants Google ne sont pas encore renseignés sur le serveur
-              (<code>GOOGLE_CLIENT_ID</code> et <code>GOOGLE_CLIENT_SECRET</code>).
-            </p>
-          } @else if (google()!.connecte) {
-            <p class="aide">
-              Connecté : vos prochains rendez-vous (dont ceux réservés via Calendly) s'affichent ci-contre.
-            </p>
-            <button class="btn secondaire petit" (click)="deconnecterGoogle()">Déconnecter</button>
-          } @else {
-            <p class="aide">
-              Connectez votre agenda pour afficher vos rendez-vous dans cet espace. Pour que Calendly y ajoute les séances, reliez aussi ce même agenda dans Calendly (Intégrations).
-            </p>
-            <a class="btn petit" href="/api/google/connexion">Connecter Google Agenda</a>
-          }
-        </section>
-
         <section class="carte">
           <h2>Mes clients</h2>
           <form class="ajout" (ngSubmit)="ajouterClient()">
@@ -252,23 +215,20 @@ export class EspacePro {
 
   protected readonly clients = computed(() => this.data.utilisateurs().filter((u) => u.role === 'client'));
   protected readonly rdv = signal<Rdv[]>([]);
+  protected readonly configure = signal<boolean | null>(null);
+  protected readonly creneau = formaterCreneau;
   protected readonly erreurAgenda = signal(false);
 
   protected nouveauNom = '';
   protected nouveauSolde = 10;
   protected readonly cree = signal<Utilisateur | null>(null);
 
-  protected readonly google = signal<{ configure: boolean; connecte: boolean } | null>(null);
-  protected readonly retourGoogle = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('google'));
-
   constructor() {
-    if (this.navigateur) void this.chargerStatutGoogle();
+    if (this.navigateur) void this.chargerRdv();
   }
 
-  protected horaire(r: Rdv): string {
-    const jour = new Date(r.debut).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
-    const h = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
-    return `${jour}, ${h(r.debut)} – ${h(r.fin)}`;
+  protected nomClient(r: Rdv): string {
+    return (r.clientId && this.data.utilisateur(r.clientId)?.nom) || r.invite;
   }
 
   protected ajouterClient(): void {
@@ -290,29 +250,12 @@ export class EspacePro {
     this.cree.set(null);
   }
 
-  protected async deconnecterGoogle(): Promise<void> {
-    await fetch('/api/google/deconnexion', { method: 'POST' });
-    await this.chargerStatutGoogle();
-  }
-
-  private async chargerStatutGoogle(): Promise<void> {
-    try {
-      const r = await fetch('/api/google/statut');
-      this.google.set(r.ok ? await r.json() : { configure: false, connecte: false });
-    } catch {
-      this.google.set({ configure: false, connecte: false });
-    }
-    await this.chargerRdv();
-  }
-
   private async chargerRdv(): Promise<void> {
-    this.erreurAgenda.set(false);
-    this.rdv.set([]);
-    if (!this.google()?.connecte) return;
     try {
-      const r = await fetch('/api/google/rdv');
-      if (!r.ok) throw new Error(String(r.status));
-      this.rdv.set((await r.json()).rdv);
+      const r = await chargerRdv();
+      this.configure.set(r.configure);
+      this.rdv.set(r.rdv);
+      this.erreurAgenda.set(false);
     } catch {
       this.erreurAgenda.set(true);
     }
