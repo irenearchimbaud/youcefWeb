@@ -3,9 +3,9 @@ import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { DataService } from '../../core/data.service';
-import { Demande, Utilisateur, classeStatut, formaterCreneau } from '../../core/models';
+import { Utilisateur } from '../../core/models';
 
-const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
+interface Rdv { id: string; titre: string; debut: string; fin: string; lien?: string; visio?: string }
 
 @Component({
   selector: 'app-espace-pro',
@@ -16,8 +16,8 @@ const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'S
         <span class="sur-titre">Espace professionnel</span>
         <h1>Bonjour Youcef</h1>
         <div class="stats">
-          <div><strong>{{ enAttente() }}</strong><span>demandes à traiter</span></div>
-          <div><strong>{{ acceptees() }}</strong><span>séances confirmées</span></div>
+          <div><strong>{{ rdv().length }}</strong><span>rendez-vous à venir</span></div>
+          <div><strong>{{ data.reservations().length }}</strong><span>séances réservées</span></div>
           <div><strong>{{ clients().length }}</strong><span>clients</span></div>
         </div>
       </div>
@@ -26,60 +26,36 @@ const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'S
     <div class="conteneur grille">
       <div class="colonne">
         <section class="carte">
-          <h2>Demandes de séance</h2>
-          @if (erreur()) {
-            <p class="erreur" role="alert">{{ erreur() }}</p>
-          }
-          @for (d of demandes(); track d.id) {
-            <article class="demande">
-              <span class="avatar">{{ nomClient(d).charAt(0) }}</span>
-              <div class="corps">
-                <div class="titre">
-                  <strong>{{ nomClient(d) }}</strong>
-                  <small>{{ creneau(d.debut, d.fin) }}</small>
-                  <small>Solde : {{ soldeClient(d) }} séance(s)</small>
-                </div>
-                @if (d.message) {
-                  <p>{{ d.message }}</p>
-                }
-              </div>
-              @if (d.statut === 'en attente') {
-                <div class="actions">
-                  <button class="btn petit" [disabled]="occupe() === d.id || soldeClient(d) < 1" (click)="accepter(d)">
-                    {{ occupe() === d.id ? '…' : 'Accepter' }}
-                  </button>
-                  <button class="btn secondaire petit" [disabled]="occupe() === d.id" (click)="data.refuser(d.id)">Refuser</button>
-                </div>
-              } @else {
-                <span class="badge" [class]="'badge ' + classe(d.statut)">{{ d.statut }}</span>
-              }
-            </article>
-          } @empty {
-            <p class="vide">Aucune demande pour le moment. Elles apparaîtront ici dès qu'un client réservera un créneau.</p>
-          }
-        </section>
-
-        <section class="carte">
-          <h2>Mes disponibilités</h2>
+          <h2>Prochains rendez-vous</h2>
           <p class="aide">
-            Plages hebdomadaires où vos clients peuvent réserver, par séances d'une heure.
-            Les moments déjà pris dans votre Google Agenda sont retirés automatiquement.
+            Les séances réservées par vos clients via Calendly arrivent directement dans votre Google Agenda.
+            Vos disponibilités se règlent dans Calendly.
           </p>
-          @for (d of dispos; track d.jour) {
-            <div class="dispo">
-              <label class="jour">
-                <input type="checkbox" [name]="'actif' + d.jour" [(ngModel)]="d.actif" (ngModelChange)="sauverDispos()" />
-                {{ jours[d.jour] }}
-              </label>
-              <input type="time" [name]="'debut' + d.jour" [(ngModel)]="d.debut" (ngModelChange)="sauverDispos()"
-                [disabled]="!d.actif" [attr.aria-label]="'Début ' + jours[d.jour]" />
-              <span aria-hidden="true">–</span>
-              <input type="time" [name]="'fin' + d.jour" [(ngModel)]="d.fin" (ngModelChange)="sauverDispos()"
-                [disabled]="!d.actif" [attr.aria-label]="'Fin ' + jours[d.jour]" />
-              @if (d.actif && d.fin <= d.debut) {
-                <small class="erreur">Fin avant le début</small>
-              }
-            </div>
+          @if (google()?.connecte) {
+            @for (r of rdv(); track r.id) {
+              <article class="demande">
+                <span class="avatar">{{ r.titre.charAt(0) }}</span>
+                <div class="corps">
+                  <strong>{{ r.titre }}</strong>
+                  <small>{{ horaire(r) }}</small>
+                </div>
+                <div class="actions">
+                  @if (r.visio) {
+                    <a class="btn petit" [href]="r.visio" target="_blank" rel="noopener">Visio</a>
+                  }
+                  @if (r.lien) {
+                    <a class="btn secondaire petit" [href]="r.lien" target="_blank" rel="noopener">Agenda</a>
+                  }
+                </div>
+              </article>
+            } @empty {
+              <p class="vide">Aucun rendez-vous à venir.</p>
+            }
+            @if (erreurAgenda()) {
+              <p class="erreur" role="alert">L'agenda n'a pas pu être lu pour le moment.</p>
+            }
+          } @else {
+            <p class="vide">Connectez votre Google Agenda pour afficher vos rendez-vous ici.</p>
           }
         </section>
       </div>
@@ -101,12 +77,12 @@ const JOURS = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'S
             </p>
           } @else if (google()!.connecte) {
             <p class="aide">
-              Connecté : vos créneaux occupés sont masqués, et chaque séance acceptée est ajoutée à votre agenda avec un lien de visio.
+              Connecté : vos prochains rendez-vous (dont ceux réservés via Calendly) s'affichent ci-contre.
             </p>
             <button class="btn secondaire petit" (click)="deconnecterGoogle()">Déconnecter</button>
           } @else {
             <p class="aide">
-              Connectez votre agenda pour masquer automatiquement vos créneaux occupés et y ajouter les séances acceptées.
+              Connectez votre agenda pour afficher vos rendez-vous dans cet espace. Pour que Calendly y ajoute les séances, reliez aussi ce même agenda dans Calendly (Intégrations).
             </p>
             <a class="btn petit" href="/api/google/connexion">Connecter Google Agenda</a>
           }
@@ -274,24 +250,13 @@ export class EspacePro {
   protected readonly data = inject(DataService);
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
 
-  protected readonly jours = JOURS;
-  protected readonly classe = classeStatut;
-  protected readonly creneau = formaterCreneau;
-
   protected readonly clients = computed(() => this.data.utilisateurs().filter((u) => u.role === 'client'));
-  protected readonly demandes = computed(() => this.data.demandes());
-  protected readonly enAttente = computed(() => this.demandes().filter((d) => d.statut === 'en attente').length);
-  protected readonly acceptees = computed(() => this.demandes().filter((d) => d.statut === 'acceptée').length);
-
-  // Copie locale éditable des disponibilités ; chaque modification est enregistrée aussitôt.
-  protected readonly dispos = this.data.disponibilites().map((d) => ({ ...d }));
+  protected readonly rdv = signal<Rdv[]>([]);
+  protected readonly erreurAgenda = signal(false);
 
   protected nouveauNom = '';
   protected nouveauSolde = 10;
   protected readonly cree = signal<Utilisateur | null>(null);
-
-  protected readonly occupe = signal<string | null>(null);
-  protected readonly erreur = signal('');
 
   protected readonly google = signal<{ configure: boolean; connecte: boolean } | null>(null);
   protected readonly retourGoogle = signal(inject(ActivatedRoute).snapshot.queryParamMap.get('google'));
@@ -300,16 +265,10 @@ export class EspacePro {
     if (this.navigateur) void this.chargerStatutGoogle();
   }
 
-  protected nomClient(d: Demande): string {
-    return this.data.utilisateur(d.clientId)?.nom ?? 'Client inconnu';
-  }
-
-  protected soldeClient(d: Demande): number {
-    return this.data.utilisateur(d.clientId)?.solde ?? 0;
-  }
-
-  protected sauverDispos(): void {
-    this.data.majDisponibilites(this.dispos.map((d) => ({ ...d })));
+  protected horaire(r: Rdv): string {
+    const jour = new Date(r.debut).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
+    const h = (iso: string) => new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+    return `${jour}, ${h(r.debut)} – ${h(r.fin)}`;
   }
 
   protected ajouterClient(): void {
@@ -331,30 +290,6 @@ export class EspacePro {
     this.cree.set(null);
   }
 
-  /** Crée la séance dans Google Agenda (si connecté), puis l'accepte et décompte une séance. */
-  protected async accepter(d: Demande): Promise<void> {
-    this.erreur.set('');
-    this.occupe.set(d.id);
-    try {
-      if (this.google()?.connecte) {
-        const r = await fetch('/api/google/evenement', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ debut: d.debut, fin: d.fin, client: this.nomClient(d) }),
-        });
-        if (!r.ok) {
-          this.erreur.set("La séance n'a pas pu être ajoutée à Google Agenda : la demande reste en attente.");
-          return;
-        }
-      }
-      if (!this.data.accepter(d.id)) this.erreur.set("Ce client n'a plus de séance disponible.");
-    } catch {
-      this.erreur.set('Erreur réseau : la demande reste en attente.');
-    } finally {
-      this.occupe.set(null);
-    }
-  }
-
   protected async deconnecterGoogle(): Promise<void> {
     await fetch('/api/google/deconnexion', { method: 'POST' });
     await this.chargerStatutGoogle();
@@ -366,6 +301,20 @@ export class EspacePro {
       this.google.set(r.ok ? await r.json() : { configure: false, connecte: false });
     } catch {
       this.google.set({ configure: false, connecte: false });
+    }
+    await this.chargerRdv();
+  }
+
+  private async chargerRdv(): Promise<void> {
+    this.erreurAgenda.set(false);
+    this.rdv.set([]);
+    if (!this.google()?.connecte) return;
+    try {
+      const r = await fetch('/api/google/rdv');
+      if (!r.ok) throw new Error(String(r.status));
+      this.rdv.set((await r.json()).rdv);
+    } catch {
+      this.erreurAgenda.set(true);
     }
   }
 }

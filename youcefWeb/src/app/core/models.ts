@@ -18,36 +18,10 @@ export interface Document {
   date: string;
 }
 
-export type StatutDemande = 'en attente' | 'acceptée' | 'refusée';
-
-/** Demande de séance sur un créneau précis ; acceptée, elle décompte une séance du solde. */
-export interface Demande {
+/** Séance réservée via Calendly ; le détail (date, lien de visio) est dans l'agenda et l'e-mail de confirmation. */
+export interface Reservation {
   id: string;
   clientId: string;
-  /** Début et fin du créneau, en ISO 8601 (UTC). */
-  debut: string;
-  fin: string;
-  message: string;
+  /** Date de la réservation (AAAA-MM-JJ). */
   date: string;
-  statut: StatutDemande;
 }
-
-/** Plage hebdomadaire pendant laquelle Youcef accepte des séances. */
-export interface Disponibilite {
-  /** 0 = dimanche … 6 = samedi (convention de Date.getDay). */
-  jour: number;
-  actif: boolean;
-  debut: string; // HH:MM
-  fin: string; // HH:MM
-}
-
-export const classeStatut = (s: StatutDemande): string =>
-  ({ 'en attente': 'attente', 'acceptée': 'acceptee', 'refusée': 'refusee' })[s];
-
-export const formaterCreneau = (debut: string, fin: string): string => {
-  const d = new Date(debut);
-  const jour = d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
-  const heure = (iso: string) =>
-    new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
-  return `${jour}, ${heure(debut)} – ${heure(fin)}`;
-};

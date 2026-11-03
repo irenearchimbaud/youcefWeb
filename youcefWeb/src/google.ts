@@ -6,11 +6,7 @@ const env = process.env;
 
 const FICHIER_JETON = join(process.cwd(), '.google-token.json');
 const CALENDRIER = env['GOOGLE_CALENDAR_ID'] ?? 'primary';
-const FUSEAU = 'Europe/Paris';
-const SCOPES = [
-  'https://www.googleapis.com/auth/calendar.events',
-  'https://www.googleapis.com/auth/calendar.freebusy',
-];
+const SCOPES = ['https://www.googleapis.com/auth/calendar.events.readonly'];
 
 interface Jeton {
   refresh_token: string;
@@ -18,9 +14,13 @@ interface Jeton {
   expiration?: number;
 }
 
-export interface PlageOccupee {
-  start: string;
-  end: string;
+export interface Rdv {
+  id: string;
+  titre: string;
+  debut: string;
+  fin: string;
+  lien?: string;
+  visio?: string;
 }
 
 // États OAuth émis et pas encore consommés (protège le callback d'un appel forgé).
@@ -105,39 +105,28 @@ async function jetonAcces(): Promise<string> {
   return rep.access_token;
 }
 
-async function appelAgenda<T>(chemin: string, corps: unknown): Promise<T> {
-  const reponse = await fetch(`https://www.googleapis.com/calendar/v3${chemin}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${await jetonAcces()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(corps),
+/** Prochains rendez-vous de l'agenda de Youcef (dont ceux réservés via Calendly). */
+export async function prochainsRdv(max = 20): Promise<Rdv[]> {
+  const params = new URLSearchParams({
+    timeMin: new Date().toISOString(),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+    maxResults: String(max),
   });
-  if (!reponse.ok) throw new Error(`Google Agenda ${reponse.status}: ${await reponse.text()}`);
-  return reponse.json();
-}
-
-/** Plages déjà occupées dans l'agenda de Youcef entre deux dates. */
-export async function plagesOccupees(debut: string, fin: string): Promise<PlageOccupee[]> {
-  const rep = await appelAgenda<{ calendars: Record<string, { busy?: PlageOccupee[] }> }>('/freeBusy', {
-    timeMin: debut,
-    timeMax: fin,
-    timeZone: FUSEAU,
-    items: [{ id: CALENDRIER }],
-  });
-  return rep.calendars[CALENDRIER]?.busy ?? [];
-}
-
-/** Crée la séance dans l'agenda de Youcef, avec un lien de visio Google Meet. */
-export async function creerEvenement(e: { debut: string; fin: string; client: string }): Promise<{ lien?: string }> {
-  const rep = await appelAgenda<{ htmlLink?: string }>(
-    `/calendars/${encodeURIComponent(CALENDRIER)}/events?conferenceDataVersion=1`,
-    {
-      summary: `Séance : ${e.client}`,
-      start: { dateTime: e.debut, timeZone: FUSEAU },
-      end: { dateTime: e.fin, timeZone: FUSEAU },
-      conferenceData: {
-        createRequest: { requestId: randomBytes(8).toString('hex'), conferenceSolutionKey: { type: 'hangoutsMeet' } },
-      },
-    },
+  const reponse = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(CALENDRIER)}/events?${params}`,
+    { headers: { Authorization: `Bearer ${await jetonAcces()}` } },
   );
-  return { lien: rep.htmlLink };
+  if (!reponse.ok) throw new Error(`Google Agenda ${reponse.status}: ${await reponse.text()}`);
+  const { items = [] } = (await reponse.json()) as { items?: any[] };
+  return items
+    .filter((e) => e.status !== 'cancelled' && e.start?.dateTime)
+    .map((e) => ({
+      id: e.id,
+      titre: e.summary ?? '(sans titre)',
+      debut: e.start.dateTime,
+      fin: e.end?.dateTime ?? e.start.dateTime,
+      lien: e.htmlLink,
+      visio: e.hangoutLink ?? e.conferenceData?.entryPoints?.find((p: any) => p.entryPointType === 'video')?.uri,
+    }));
 }
