@@ -1,12 +1,13 @@
 import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { DataService } from '../../core/data.service';
 import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models';
 
 @Component({
   selector: 'app-espace-pro',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <section class="bandeau">
       <div class="conteneur">
@@ -77,12 +78,9 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
                 <strong>{{ c.nom }}</strong>
                 <small>{{ c.identifiant }} · <code>{{ c.code }}</code></small>
               </div>
-              <div class="solde" role="group" [attr.aria-label]="'Solde de ' + c.nom">
-                <button type="button" (click)="data.ajusterSolde(c.id, -1)" [disabled]="c.solde < 1" aria-label="Retirer une séance">−</button>
-                <span><strong>{{ c.solde }}</strong> séance(s)</span>
-                <button type="button" (click)="data.ajusterSolde(c.id, 1)" aria-label="Ajouter une séance">+</button>
-              </div>
+              <span class="solde"><strong>{{ c.solde }}</strong> séance(s) · {{ data.documentsDe(c.id).length }} doc(s)</span>
               <div class="outils">
+                <a class="btn petit" [routerLink]="['/espace-pro/client', c.id]">Ouvrir la fiche</a>
                 <button type="button" class="lien" (click)="regenerer(c)">Nouveau code</button>
                 <button type="button" class="lien danger" (click)="supprimer(c)">Supprimer</button>
               </div>
@@ -172,25 +170,8 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
       small { color: var(--texte-doux); }
     }
     .client { flex-wrap: wrap; }
-    .solde {
-      display: flex;
-      align-items: center;
-      gap: 0.6rem;
-      font-size: 0.85rem;
-      button {
-        width: 1.9rem;
-        height: 1.9rem;
-        border: 1.5px solid var(--champagne);
-        border-radius: 50%;
-        background: var(--blanc);
-        font: 600 1rem var(--sans);
-        color: var(--bleu-profond);
-        cursor: pointer;
-        &:hover:not(:disabled) { background: var(--bleu-diamant); }
-        &:disabled { opacity: 0.4; cursor: not-allowed; }
-      }
-    }
-    .outils { flex-basis: 100%; display: flex; gap: 1rem; padding-left: 3.4rem; }
+    .solde { font-size: 0.85rem; color: var(--texte-doux); strong { color: var(--bleu-profond); } }
+    .outils { flex-basis: 100%; display: flex; align-items: center; gap: 1rem; padding-left: 3.4rem; }
     .lien {
       padding: 0;
       border: 0;

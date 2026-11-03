@@ -4,7 +4,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../core/auth.service';
 import { CALENDLY_URL } from '../../core/config';
 import { DataService } from '../../core/data.service';
-import { Rdv, chargerRdv, formaterCreneau } from '../../core/models';
+import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTaille } from '../../core/models';
 
 @Component({
   selector: 'app-espace-client',
@@ -25,6 +25,9 @@ import { Rdv, chargerRdv, formaterCreneau } from '../../core/models';
       <div class="colonne">
         <section class="carte">
           <h2>Mes documents</h2>
+          @if (erreurDoc()) {
+            <p class="erreur" role="alert">{{ erreurDoc() }}</p>
+          }
           @for (d of documents(); track d.id) {
             <div class="ligne">
               <span class="icone" aria-hidden="true">
@@ -32,7 +35,13 @@ import { Rdv, chargerRdv, formaterCreneau } from '../../core/models';
               </span>
               <div class="infos">
                 <strong>{{ d.titre }}</strong>
-                <small>{{ d.date }}</small>
+                <small>{{ d.date }} · {{ taille(d.taille) }}</small>
+              </div>
+              <div class="actions">
+                @if (visualisable(d)) {
+                  <button type="button" class="btn secondaire petit" (click)="voir(d)">Voir</button>
+                }
+                <button type="button" class="btn secondaire petit" (click)="telecharger(d)">Télécharger</button>
               </div>
             </div>
           } @empty {
@@ -125,6 +134,8 @@ import { Rdv, chargerRdv, formaterCreneau } from '../../core/models';
       color: var(--bleu-nuit);
     }
     .vide { color: var(--texte-doux); margin: 0; }
+    .erreur { color: var(--danger); font-size: 0.9rem; font-weight: 500; margin: 0 0 0.8rem; }
+    .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; justify-content: flex-end; }
 
     .demande { position: sticky; top: 6rem; }
     .aide { color: var(--texte-doux); font-size: 0.93rem; }
@@ -151,6 +162,17 @@ export class EspaceClient {
   protected readonly erreurRdv = signal(false);
   protected readonly creneau = formaterCreneau;
   protected readonly retour = signal('');
+  protected readonly erreurDoc = signal('');
+  protected readonly taille = formaterTaille;
+  protected readonly visualisable = (d: Document) => estVisualisable(d.type);
+
+  protected async voir(d: Document): Promise<void> {
+    this.erreurDoc.set((await this.data.visualiser(d)) ? '' : 'Ce document est introuvable.');
+  }
+
+  protected async telecharger(d: Document): Promise<void> {
+    this.erreurDoc.set((await this.data.telecharger(d)) ? '' : 'Ce document est introuvable.');
+  }
 
   /** Widget Calendly (navigateur uniquement), pré-rempli avec le nom du client. */
   protected readonly calendly = computed<SafeResourceUrl | null>(() => {

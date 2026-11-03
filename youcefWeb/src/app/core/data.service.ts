@@ -1,9 +1,11 @@
 import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { Document, Utilisateur } from './models';
+import { enregistrerFichier, lireFichier, supprimerFichier } from './fichiers';
 
 const CLES = {
   utilisateurs: 'youcef-utilisateurs',
+  documents: 'youcef-documents',
 };
 
 // Données de démonstration, en attendant la base SQL.
@@ -11,13 +13,6 @@ const UTILISATEURS: Utilisateur[] = [
   { id: 'u1', identifiant: 'youcef', code: 'pro123', nom: 'Youcef', role: 'pro', solde: 0 },
   { id: 'u2', identifiant: 'marie-dupont', code: 'K7M2-QX9P', nom: 'Marie Dupont', role: 'client', solde: 10 },
   { id: 'u3', identifiant: 'paul-martin', code: 'T4NR-8WHD', nom: 'Paul Martin', role: 'client', solde: 5 },
-];
-
-const DOCUMENTS: Document[] = [
-  { id: 'd1', clientId: 'u2', titre: 'Contrat d\'accompagnement', date: '2026-09-02' },
-  { id: 'd2', clientId: 'u2', titre: 'Compte rendu - séance 1', date: '2026-09-09' },
-  { id: 'd3', clientId: 'u2', titre: 'Exercices estime de soi', date: '2026-09-16' },
-  { id: 'd4', clientId: 'u3', titre: 'Contrat d\'accompagnement', date: '2026-10-01' },
 ];
 
 // Sans caractères ambigus (0/O, 1/I/L).
@@ -37,7 +32,7 @@ export class DataService {
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
 
   readonly utilisateurs = signal<Utilisateur[]>(this.lire(CLES.utilisateurs, UTILISATEURS));
-  readonly documents = signal<Document[]>(DOCUMENTS);
+  readonly documents = signal<Document[]>(this.lire(CLES.documents, []));
 
   clients(): Utilisateur[] {
     return this.utilisateurs().filter((u) => u.role === 'client');
@@ -64,11 +59,69 @@ export class DataService {
 
   supprimerClient(id: string): void {
     this.majUtilisateurs(this.utilisateurs().filter((u) => u.id !== id));
-    this.documents.update((l) => l.filter((d) => d.clientId !== id));
+    this.documentsDe(id).forEach((d) => void supprimerFichier(d.id).catch(() => {}));
+    this.majDocuments(this.documents().filter((d) => d.clientId !== id));
+  }
+
+  // --- Documents ---
+
+  async ajouterDocument(clientId: string, titre: string, fichier: File): Promise<Document> {
+    const doc: Document = {
+      id: crypto.randomUUID(),
+      clientId,
+      titre: titre.trim() || fichier.name,
+      date: new Date().toISOString().slice(0, 10),
+      fichier: fichier.name,
+      type: fichier.type || 'application/octet-stream',
+      taille: fichier.size,
+    };
+    await enregistrerFichier(doc.id, fichier);
+    this.majDocuments([...this.documents(), doc]);
+    return doc;
+  }
+
+  async supprimerDocument(id: string): Promise<void> {
+    await supprimerFichier(id);
+    this.majDocuments(this.documents().filter((d) => d.id !== id));
+  }
+
+  contenuDocument(id: string): Promise<Blob | undefined> {
+    return lireFichier(id);
+  }
+
+  /** Ouvre le document dans un nouvel onglet (à appeler directement depuis le clic, sinon le navigateur bloque la fenêtre). */
+  async visualiser(doc: Document): Promise<boolean> {
+    const fenetre = window.open('', '_blank');
+    const blob = await lireFichier(doc.id);
+    if (!blob) {
+      fenetre?.close();
+      return false;
+    }
+    const url = URL.createObjectURL(new Blob([blob], { type: doc.type }));
+    if (fenetre) fenetre.location.href = url;
+    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    return true;
+  }
+
+  async telecharger(doc: Document): Promise<boolean> {
+    const blob = await lireFichier(doc.id);
+    if (!blob) return false;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = doc.fichier;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
   }
 
   ajusterSolde(id: string, delta: number): void {
-    this.majUtilisateurs(this.utilisateurs().map((u) => (u.id === id ? { ...u, solde: Math.max(0, u.solde + delta) } : u)));
+    this.definirSolde(id, (this.utilisateur(id)?.solde ?? 0) + delta);
+  }
+
+  definirSolde(id: string, solde: number): void {
+    const valeur = Math.max(0, Math.floor(solde));
+    this.majUtilisateurs(this.utilisateurs().map((u) => (u.id === id ? { ...u, solde: valeur } : u)));
   }
 
   regenererCode(id: string): void {
@@ -78,6 +131,11 @@ export class DataService {
   /** Décompte une séance du solde (appelé quand le client vient de réserver via Calendly). */
   consommerSeance(clientId: string): void {
     this.ajusterSolde(clientId, -1);
+  }
+
+  private majDocuments(liste: Document[]): void {
+    this.documents.set(liste);
+    this.ecrire(CLES.documents, liste);
   }
 
   private majUtilisateurs(liste: Utilisateur[]): void {

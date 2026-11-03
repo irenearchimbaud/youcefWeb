@@ -26,5 +26,10 @@ export const routes: Routes = [
     canActivate: [roleGuard('pro')],
     loadComponent: () => import('./pages/espace-pro/espace-pro').then((m) => m.EspacePro),
   },
+  {
+    path: 'espace-pro/client/:id',
+    canActivate: [roleGuard('pro')],
+    loadComponent: () => import('./pages/fiche-client/fiche-client').then((m) => m.FicheClient),
+  },
   { path: '**', redirectTo: '' },
 ];

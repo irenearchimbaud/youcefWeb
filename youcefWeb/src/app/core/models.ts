@@ -16,7 +16,23 @@ export interface Document {
   clientId: string;
   titre: string;
   date: string;
+  /** Nom d'origine du fichier déposé. */
+  fichier: string;
+  type: string;
+  /** Taille en octets. */
+  taille: number;
 }
+
+/** Formats acceptés pour les documents déposés, et taille maximale (le stockage est local au navigateur). */
+export const TYPES_DOCUMENT = '.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt';
+export const TAILLE_MAX_DOCUMENT = 10 * 1024 * 1024;
+
+export const formaterTaille = (octets: number): string =>
+  octets < 1024 * 1024 ? `${Math.max(1, Math.round(octets / 1024))} Ko` : `${(octets / 1024 / 1024).toFixed(1)} Mo`;
+
+/** Les PDF, images et textes s'affichent dans le navigateur ; le reste ne peut que se télécharger. */
+export const estVisualisable = (type: string): boolean =>
+  type === 'application/pdf' || type === 'text/plain' || type.startsWith('image/');
 
 /** Rendez-vous Calendly à venir (renvoyé par /api/rdv). */
 export interface Rdv {
