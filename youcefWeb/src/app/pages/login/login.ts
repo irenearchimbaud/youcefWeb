@@ -33,12 +33,6 @@ import { TrPipe } from '../../core/i18n';
 
           <button class="btn large" type="submit">{{ 'Se connecter' | tr: 'Sign in' }}</button>
 
-          <div class="demo">
-            <span>{{ 'Comptes de démonstration' | tr: 'Demo accounts' }}</span>
-            <button type="button" (click)="remplir('marie-dupont', 'K7M2-QX9P')">{{ 'Espace client' | tr: 'Client area' }}</button>
-            <button type="button" (click)="remplir('youcef', 'pro123')">{{ 'Espace Youcef' | tr: 'Youcef's area' }}</button>
-          </div>
-
           <a routerLink="/" class="retour">{{ "← Retour à l'accueil" | tr: '← Back to home' }}</a>
         </form>
       </section>
@@ -81,30 +75,6 @@ import { TrPipe } from '../../core/i18n';
     .btn { margin-top: 1.6rem; }
     .erreur { color: var(--danger); margin: 0.9rem 0 0; font-size: 0.9rem; font-weight: 500; }
 
-    .demo {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.5rem;
-      margin-top: 1.8rem;
-      padding-top: 1.4rem;
-      border-top: 1px solid var(--champagne);
-      font-size: 0.8rem;
-      color: var(--texte-doux);
-
-      span { width: 100%; }
-      button {
-        padding: 0.35rem 0.9rem;
-        border: 1px solid var(--champagne);
-        border-radius: 999px;
-        background: var(--blanc);
-        font: 500 0.82rem var(--sans);
-        color: var(--bleu-profond);
-        cursor: pointer;
-        transition: background 0.2s, border-color 0.2s;
-        &:hover { background: var(--bleu-diamant); border-color: var(--bleu-clair); }
-      }
-    }
     .retour { display: inline-block; margin-top: 1.8rem; font-size: 0.88rem; color: var(--texte-doux); text-decoration: none; &:hover { color: var(--bleu-profond); } }
 
     @media (max-width: 800px) {
@@ -119,12 +89,6 @@ export class Login {
   protected identifiant = '';
   protected code = '';
   protected readonly erreur = signal(false);
-
-  protected remplir(identifiant: string, code: string): void {
-    this.identifiant = identifiant;
-    this.code = code;
-    this.erreur.set(false);
-  }
 
   protected valider(): void {
     this.erreur.set(!this.auth.connexion(this.identifiant, this.code));
