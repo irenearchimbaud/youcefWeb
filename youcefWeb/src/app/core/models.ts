@@ -21,13 +21,11 @@ export interface Document {
   type: string;
   /** Taille en octets. */
   taille: number;
-  /** Emplacement dans le stockage privé. */
-  chemin: string;
 }
 
 /** Formats acceptés pour les documents déposés, et taille maximale (limite du stockage). */
 export const TYPES_DOCUMENT = '.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt';
-export const TAILLE_MAX_DOCUMENT = 10 * 1024 * 1024;
+export const TAILLE_MAX_DOCUMENT = 4 * 1024 * 1024;
 
 export const formaterTaille = (octets: number, langue: 'fr' | 'en' = 'fr'): string => {
   const [ko, mo] = langue === 'en' ? ['KB', 'MB'] : ['Ko', 'Mo'];
@@ -57,13 +55,13 @@ export const formaterCreneau = (debut: string, fin: string, locale = 'fr-FR'): s
 };
 
 /** Récupère les rendez-vous Calendly (tous, ou ceux d'un client). Réessaie une fois : la fonction serveur peut mettre un instant à démarrer. */
-export async function chargerRdv(jeton: string | null, clientId?: string, frais = false): Promise<{ configure: boolean; rdv: Rdv[] }> {
+export async function chargerRdv(clientId?: string, frais = false): Promise<{ configure: boolean; rdv: Rdv[] }> {
   const params = new URLSearchParams();
   if (clientId) params.set('client', clientId);
   if (frais) params.set('frais', '1');
   for (let essai = 0; ; essai++) {
     try {
-      const r = await fetch(`/api/rdv?${params}`, { headers: jeton ? { Authorization: `Bearer ${jeton}` } : {} });
+      const r = await fetch(`/api/rdv?${params}`);
       if (!r.ok) throw new Error(String(r.status));
       return await r.json();
     } catch (e) {

@@ -33,6 +33,7 @@
             "styles": [
               "src/styles.scss"
             ],
+            "externalDependencies": ["@vercel/blob", "nodemailer"],
             "server": "src/main.server.ts",
             "outputMode": "server",
             "security": {

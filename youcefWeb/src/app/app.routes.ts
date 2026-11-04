@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { roleGuard, sessionGuard } from './core/guards';
+import { roleGuard, motDePasseGuard } from './core/guards';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
@@ -8,7 +8,7 @@ export const routes: Routes = [
   { path: 'mot-de-passe-oublie', loadComponent: () => import('./pages/mot-de-passe-oublie/mot-de-passe-oublie').then((m) => m.MotDePasseOublie) },
   {
     path: 'nouveau-mot-de-passe',
-    canActivate: [sessionGuard],
+    canActivate: [motDePasseGuard],
     loadComponent: () => import('./pages/nouveau-mot-de-passe/nouveau-mot-de-passe').then((m) => m.NouveauMotDePasse),
   },
   {

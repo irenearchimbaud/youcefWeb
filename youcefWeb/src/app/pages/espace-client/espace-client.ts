@@ -238,7 +238,7 @@ export class EspaceClient {
   protected async charger(frais = false): Promise<void> {
     this.chargementRdv.set(true);
     try {
-      this.rdv.set((await chargerRdv(await this.auth.jeton(), this.utilisateur().id, frais)).rdv);
+      this.rdv.set((await chargerRdv(this.utilisateur().id, frais)).rdv);
       this.erreurRdv.set(false);
     } catch {
       this.erreurRdv.set(true);

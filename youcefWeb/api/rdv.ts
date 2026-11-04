@@ -1,5 +1,4 @@
-import { rdv } from '../src/serveur/rdv';
+import { routes } from '../src/serveur/routes';
 import { versVercel } from '../src/serveur/vercel';
 
-/** Équivalent Vercel de la route Express GET /api/rdv de src/server.ts. */
-export default versVercel(rdv);
+export default versVercel(routes.rdv);
