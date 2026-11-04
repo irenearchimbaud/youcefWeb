@@ -51,6 +51,9 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
 
         <section class="carte">
           <h2>Mes séances</h2>
+          @if (chargementRdv()) {
+            <p class="chargement" role="status">Chargement de vos séances…</p>
+          }
           @for (r of rdv(); track r.id) {
             <div class="ligne">
               <div class="infos">
@@ -62,7 +65,16 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
               }
             </div>
           } @empty {
-            <p class="vide">{{ erreurRdv() ? "Vos rendez-vous n'ont pas pu être chargés." : "Vous n'avez aucune séance à venir." }}</p>
+            @if (!chargementRdv()) {
+              @if (erreurRdv()) {
+                <p class="vide">
+                  Vos séances n'ont pas pu être chargées.
+                  <button type="button" class="lien" (click)="charger(true)">Réessayer</button>
+                </p>
+              } @else {
+                <p class="vide">Vous n'avez aucune séance à venir.</p>
+              }
+            }
           }
         </section>
       </div>
@@ -77,7 +89,12 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
             et une confirmation vous est envoyée par e-mail.
           </p>
           @if (calendly(); as url) {
-            <iframe class="calendly" [src]="url" title="Réservation d'une séance" loading="lazy"></iframe>
+            @if (!calendlyPret()) {
+              <p class="chargement" role="status">Chargement de l'agenda…</p>
+            }
+            <iframe class="calendly" [class.cache]="!calendlyPret()" [src]="url" title="Réservation d'une séance" (load)="calendlyPret.set(true)"></iframe>
+          } @else {
+            <p class="chargement" role="status">Chargement de l'agenda…</p>
           }
         }
         @if (retour()) {
@@ -141,7 +158,8 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
     .aide { color: var(--texte-doux); font-size: 0.93rem; }
     .retour { margin: 1rem 0 0; font-weight: 600; color: var(--succes); font-size: 0.92rem; }
 
-    .calendly { width: 100%; height: 680px; border: 0; border-radius: 14px; }
+    .calendly { width: 100%; height: 680px; border: 0; border-radius: 14px; &.cache { height: 0; } }
+    .lien { padding: 0; border: 0; background: none; font: 500 0.93rem var(--sans); color: var(--bleu-profond); text-decoration: underline; cursor: pointer; }
 
     @media (max-width: 900px) {
       .grille { grid-template-columns: 1fr; }
@@ -175,14 +193,20 @@ export class EspaceClient {
   }
 
   /** Widget Calendly (navigateur uniquement), pré-rempli avec le nom du client. */
+  private readonly clientId = computed(() => this.utilisateur().id);
+  private readonly clientNom = computed(() => this.utilisateur().nom);
+  protected readonly calendlyPret = signal(false);
+  protected readonly chargementRdv = signal(true);
+
+  /** L'URL ne dépend que de l'id et du nom : un changement de solde (après une réservation) ne doit pas recharger le widget. */
   protected readonly calendly = computed<SafeResourceUrl | null>(() => {
     if (!this.navigateur) return null;
     const params = new URLSearchParams({
       embed_domain: location.hostname,
       embed_type: 'Inline',
       hide_gdpr_banner: '1',
-      name: this.utilisateur().nom,
-      utm_content: this.utilisateur().id,
+      name: this.clientNom(),
+      utm_content: this.clientId(),
     });
     return this.sanitizer.bypassSecurityTrustResourceUrl(`${CALENDLY_URL}?${params}`);
   });
@@ -201,12 +225,15 @@ export class EspaceClient {
     inject(DestroyRef).onDestroy(() => window.removeEventListener('message', ecouteur));
   }
 
-  private async charger(frais = false): Promise<void> {
+  protected async charger(frais = false): Promise<void> {
+    this.chargementRdv.set(true);
     try {
       this.rdv.set((await chargerRdv(this.utilisateur().id, frais)).rdv);
       this.erreurRdv.set(false);
     } catch {
       this.erreurRdv.set(true);
+    } finally {
+      this.chargementRdv.set(false);
     }
   }
 }

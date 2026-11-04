@@ -8,11 +8,18 @@
   <meta name="description" content="Youcef Tahri, coach en développement personnel : reconstruisez votre estime de vous et faites des choix alignés avec vos valeurs. Accompagnement individuel en visio.">
   <meta name="theme-color" content="#0a1d35">
   <link rel="icon" type="image/webp" href="logo.webp">
+  <link rel="preconnect" href="https://calendly.com">
+  <link rel="preconnect" href="https://assets.calendly.com" crossorigin>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500;1,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    .demarrage { position: fixed; inset: 0; display: grid; place-items: center; background: #faf6f0; }
+    .demarrage i { width: 44px; height: 44px; border: 3px solid #d0e7f5; border-top-color: #0a1d35; border-radius: 50%; animation: demarrage 0.8s linear infinite; }
+    @keyframes demarrage { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-  <app-root></app-root>
+  <app-root><div class="demarrage" role="status" aria-label="Chargement"><i></i></div></app-root>
 </body>
 </html>

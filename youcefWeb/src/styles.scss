@@ -238,3 +238,24 @@ textarea { resize: vertical; }
   html { scroll-behavior: auto; }
   * { animation: none !important; transition: none !important; }
 }
+
+/* Indicateur de chargement */
+.chargement {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  color: var(--texte-doux);
+  font-size: 0.93rem;
+
+  &::before {
+    content: '';
+    flex: none;
+    width: 22px;
+    height: 22px;
+    border: 2.5px solid var(--bleu-diamant);
+    border-top-color: var(--bleu-profond);
+    border-radius: 50%;
+    animation: tourne 0.8s linear infinite;
+  }
+}
+@keyframes tourne { to { transform: rotate(360deg); } }

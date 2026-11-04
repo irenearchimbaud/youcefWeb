@@ -52,12 +52,19 @@ export const formaterCreneau = (debut: string, fin: string): string => {
   return `${jour}, ${heure(debut)} – ${heure(fin)}`;
 };
 
-/** Récupère les rendez-vous Calendly (tous, ou ceux d'un client). */
+/** Récupère les rendez-vous Calendly (tous, ou ceux d'un client). Réessaie une fois : la fonction serveur peut mettre un instant à démarrer. */
 export async function chargerRdv(clientId?: string, frais = false): Promise<{ configure: boolean; rdv: Rdv[] }> {
   const params = new URLSearchParams();
   if (clientId) params.set('client', clientId);
   if (frais) params.set('frais', '1');
-  const r = await fetch(`/api/rdv?${params}`);
-  if (!r.ok) throw new Error(String(r.status));
-  return r.json();
+  for (let essai = 0; ; essai++) {
+    try {
+      const r = await fetch(`/api/rdv?${params}`);
+      if (!r.ok) throw new Error(String(r.status));
+      return await r.json();
+    } catch (e) {
+      if (essai >= 1) throw e;
+      await new Promise((ok) => setTimeout(ok, 800));
+    }
+  }
 }
