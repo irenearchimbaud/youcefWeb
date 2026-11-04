@@ -3,7 +3,6 @@ export type Bilingue = [fr: string, en: string];
 
 export interface Formation {
   slug: string;
-  prix: number;
   modules: number;
   heures: number;
   niveau: Bilingue;
@@ -17,7 +16,6 @@ export interface Formation {
 export const FORMATIONS: Formation[] = [
   {
     slug: 'critique-interieur',
-    prix: 49,
     modules: 6,
     heures: 4,
     niveau: ['Débutant', 'Beginner'],
@@ -46,7 +44,6 @@ export const FORMATIONS: Formation[] = [
   },
   {
     slug: 'confiance-en-soi',
-    prix: 79,
     modules: 8,
     heures: 6,
     niveau: ['Tous niveaux', 'All levels'],
@@ -77,7 +74,6 @@ export const FORMATIONS: Formation[] = [
   },
   {
     slug: 'poser-ses-limites',
-    prix: 59,
     modules: 5,
     heures: 3,
     niveau: ['Intermédiaire', 'Intermediate'],
@@ -105,7 +101,6 @@ export const FORMATIONS: Formation[] = [
   },
   {
     slug: 'aligner-ses-valeurs',
-    prix: 89,
     modules: 7,
     heures: 5,
     niveau: ['Avancé', 'Advanced'],

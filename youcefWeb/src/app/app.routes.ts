@@ -24,10 +24,6 @@ export const routes: Routes = [
   },
   { path: 'formations/:slug', loadComponent: () => import('./pages/formation/formation').then((m) => m.Formation) },
   {
-    path: 'paiement',
-    loadComponent: () => import('./pages/paiement/paiement').then((m) => m.Paiement),
-  },
-  {
     path: 'espace-pro',
     canActivate: [roleGuard('pro')],
     loadComponent: () => import('./pages/espace-pro/espace-pro').then((m) => m.EspacePro),

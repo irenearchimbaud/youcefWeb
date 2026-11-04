@@ -37,14 +37,14 @@ import { Bilingue, trouverFormation } from '../../core/formations';
             </section>
 
             <aside class="carte achat">
-              <strong class="prix">{{ f.prix }} €</strong>
               <ul>
                 <li>{{ f.modules }} {{ 'modules' | tr: 'modules' }}</li>
                 <li>{{ f.heures }} h {{ 'de vidéo' | tr: 'of video' }}</li>
                 <li>{{ 'Accès à vie, à votre rythme' | tr: 'Lifetime access, at your own pace' }}</li>
               </ul>
-              <a routerLink="/paiement" [queryParams]="{ formation: f.slug }" class="btn large">
-                {{ 'Acheter cette formation' | tr: 'Buy this course' }}
+              <p class="sur-devis">{{ 'Tarif sur devis.' | tr: 'Pricing on request.' }}</p>
+              <a routerLink="/devis" class="btn large">
+                {{ 'Demander un devis' | tr: 'Request a quote' }}
               </a>
               <small>{{ 'Formation fictive de démonstration.' | tr: 'Fictional demo course.' }}</small>
             </aside>
@@ -67,7 +67,7 @@ import { Bilingue, trouverFormation } from '../../core/formations';
     .objectifs, .programme { padding-left: 1.3rem; }
     .objectifs li, .programme li { padding: 0.35rem 0; }
     .achat { position: sticky; top: 6rem; display: grid; gap: 1rem; }
-    .prix { font-family: var(--serif); font-size: 2.6rem; color: var(--bleu-profond); }
+    .sur-devis { margin: 0; font-family: var(--serif); font-size: 1.8rem; color: var(--bleu-profond); }
     .achat ul { list-style: none; margin: 0; padding: 0; }
     .achat li { padding: 0.5rem 0; border-top: 1px solid rgba(10, 29, 53, 0.08); font-size: 0.95rem; }
     .achat small { color: var(--texte-doux); text-align: center; }

@@ -126,7 +126,6 @@ import { FORMATIONS } from '../../core/formations';
               <div class="meta">
                 <span>{{ f.modules() }}</span>
                 <span>{{ f.duree() }}</span>
-                <span class="prix">{{ f.prix }} €</span>
               </div>
               <a [routerLink]="['/formations', f.slug]" class="btn secondaire">{{ 'En savoir plus' | tr: 'Learn more' }}</a>
             </article>
@@ -372,7 +371,6 @@ import { FORMATIONS } from '../../core/formations';
       letter-spacing: 0.1em;
       text-transform: uppercase;
     }
-    .meta .prix { margin-left: auto; color: var(--bleu-profond); }
     .meta {
       display: flex;
       gap: 1.2rem;
@@ -527,7 +525,6 @@ export class Home {
     texte: this.tx(...f.resume),
     modules: this.tx(`${f.modules} modules`, `${f.modules} modules`),
     duree: this.tx(`${f.heures} h de vidéo`, `${f.heures} h of video`),
-    prix: f.prix,
   }));
 
   protected readonly etapes = [
