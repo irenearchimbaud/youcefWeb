@@ -29,8 +29,6 @@ import { TrPipe } from '../../core/i18n';
 
           @if (erreur() === 'identifiants') {
             <p class="erreur" role="alert">{{ 'E-mail ou mot de passe incorrect.' | tr: 'Incorrect email or password.' }}</p>
-          } @else if (erreur() === 'bloque') {
-            <p class="erreur" role="alert">{{ 'Trop de tentatives. Réessayez dans 15 minutes, ou utilisez « Mot de passe oublié ».' | tr: 'Too many attempts. Try again in 15 minutes, or use “Forgot your password?”.' }}</p>
           } @else if (erreur() === 'reseau') {
             <p class="erreur" role="alert">{{ 'Connexion impossible pour le moment. Réessayez dans un instant.' | tr: 'Unable to sign in right now. Please try again in a moment.' }}</p>
           }
@@ -95,7 +93,7 @@ export class Login {
 
   protected email = '';
   protected motDePasse = '';
-  protected readonly erreur = signal<'identifiants' | 'bloque' | 'reseau' | null>(null);
+  protected readonly erreur = signal<'identifiants' | 'reseau' | null>(null);
   protected readonly envoi = signal(false);
 
   protected async valider(): Promise<void> {
@@ -104,7 +102,7 @@ export class Login {
     this.erreur.set(null);
     try {
       const r = await this.auth.connexion(this.email, this.motDePasse);
-      if (r !== 'ok') this.erreur.set(r === 'identifiants' || r === 'bloque' ? r : 'reseau');
+      if (r !== 'ok') this.erreur.set(r === 'identifiants' ? 'identifiants' : 'reseau');
     } catch {
       this.erreur.set('reseau');
     } finally {

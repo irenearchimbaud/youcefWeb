@@ -3,6 +3,7 @@ import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { I18n, TrPipe } from '../../core/i18n';
+import { AuthService } from '../../core/auth.service';
 import { DataService } from '../../core/data.service';
 import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models';
 
@@ -198,6 +199,7 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
 export class EspacePro {
   protected readonly data = inject(DataService);
   protected readonly i18n = inject(I18n);
+  private readonly auth = inject(AuthService);
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
 
   protected readonly clients = this.data.clients;
@@ -261,7 +263,7 @@ export class EspacePro {
 
   private async chargerRdv(): Promise<void> {
     try {
-      const r = await chargerRdv();
+      const r = await chargerRdv(await this.auth.jeton());
       this.configure.set(r.configure);
       this.rdv.set(r.rdv);
       this.erreurAgenda.set(false);

@@ -46,6 +46,3 @@ Thumbs.db
 # Secrets
 .env
 .google-token.json
-
-# Données locales des comptes et documents (chiffrées, mais ne pas versionner)
-/donnees

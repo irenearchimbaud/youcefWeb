@@ -1,5 +1,5 @@
 import { inject } from '@angular/core';
-import { ActivatedRouteSnapshot, CanActivateFn, Router } from '@angular/router';
+import { CanActivateFn, Router } from '@angular/router';
 import { Role } from './models';
 import { AuthService } from './auth.service';
 
@@ -15,13 +15,9 @@ export const roleGuard = (role: Role): CanActivateFn => async () => {
   return true;
 };
 
-/**
- * Page de choix du mot de passe : accessible avec le lien reçu par e-mail (paramètre « jeton », vérifié par le serveur au
- * moment de l'enregistrement) ou, à la première connexion, depuis une session ouverte avec le code.
- */
-export const motDePasseGuard: CanActivateFn = async (route: ActivatedRouteSnapshot) => {
+/** Page de choix du mot de passe : réservée aux personnes connectées (première connexion ou lien « mot de passe oublié »). */
+export const sessionGuard: CanActivateFn = async () => {
   const auth = inject(AuthService);
-  if (route.queryParamMap.get('jeton')) return true;
   await auth.pret;
   return auth.utilisateur() ? true : inject(Router).createUrlTree(['/login']);
 };

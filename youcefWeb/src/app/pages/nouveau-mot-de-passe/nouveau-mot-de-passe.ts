@@ -1,4 +1,4 @@
-import { Component, computed, inject, input, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
@@ -41,11 +41,8 @@ const LONGUEUR_MIN = 10;
             @case ('identique') {
               <p class="erreur" role="alert">{{ "Choisissez un mot de passe différent de l'ancien." | tr: 'Choose a password different from the previous one.' }}</p>
             }
-            @case ('lien') {
-              <p class="erreur" role="alert">{{ "Ce lien n'est plus valable (expiré ou déjà utilisé). Demandez-en un nouveau via « Mot de passe oublié »." | tr: 'This link is no longer valid (expired or already used). Request a new one via “Forgot your password?”.' }}</p>
-            }
             @case ('erreur') {
-              <p class="erreur" role="alert">{{ "Le mot de passe n'a pas pu être enregistré. Réessayez dans un instant." | tr: 'The password could not be saved. Please try again in a moment.' }}</p>
+              <p class="erreur" role="alert">{{ "Le mot de passe n'a pas pu être enregistré. Si le lien a expiré, demandez-en un nouveau." | tr: 'The password could not be saved. If the link has expired, please request a new one.' }}</p>
             }
           }
 
@@ -70,15 +67,12 @@ export class NouveauMotDePasse {
   private readonly auth = inject(AuthService);
   private readonly router = inject(Router);
 
-  /** Paramètre ?jeton= du lien reçu par e-mail (withComponentInputBinding). */
-  readonly jeton = input<string>();
-
-  protected readonly premiereConnexion = computed(() => !this.jeton() && this.auth.utilisateur()?.doitChangerMdp === true);
+  protected readonly premiereConnexion = computed(() => this.auth.utilisateur()?.doitChangerMdp === true);
 
   protected motDePasse = '';
   protected confirmation = '';
   protected readonly envoi = signal(false);
-  protected readonly erreur = signal<'court' | 'different' | 'identique' | 'lien' | 'erreur' | null>(null);
+  protected readonly erreur = signal<'court' | 'different' | 'identique' | 'erreur' | null>(null);
 
   protected async valider(): Promise<void> {
     if (this.envoi()) return;
@@ -87,8 +81,8 @@ export class NouveauMotDePasse {
     this.erreur.set(null);
     this.envoi.set(true);
     try {
-      const r = await this.auth.definirMotDePasse(this.motDePasse, this.jeton());
-      if (r !== 'ok') return this.erreur.set(r === 'ancien' ? 'erreur' : r);
+      const r = await this.auth.definirMotDePasse(this.motDePasse);
+      if (r !== 'ok') return this.erreur.set(r);
       const u = this.auth.utilisateur();
       void this.router.navigateByUrl(u ? this.auth.espaceDe(u) : '/login');
     } catch {

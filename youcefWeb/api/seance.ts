@@ -1,4 +1,5 @@
-import { routes } from '../src/serveur/routes';
+import { seance } from '../src/serveur/seance';
 import { versVercel } from '../src/serveur/vercel';
 
-export default versVercel(routes.seance);
+/** Équivalent Vercel de la route Express POST /api/seance de src/server.ts. */
+export default versVercel(seance);

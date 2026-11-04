@@ -6,8 +6,10 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import { clients } from './serveur/clients';
 import { Reponse, Requete } from './serveur/commun';
-import { routes } from './serveur/routes';
+import { rdv } from './serveur/rdv';
+import { seance } from './serveur/seance';
 import { traiterDevis } from './devis';
 
 // Charge le fichier .env (jeton Calendly) s'il existe.
@@ -29,20 +31,16 @@ const browserDistFolder = join(import.meta.dirname, '../browser');
 const app = express();
 const angularApp = new AngularNodeAppEngine();
 
-app.use('/api', express.json({ limit: '10kb' }), express.raw({ type: 'application/octet-stream', limit: '5mb' }));
+app.use('/api', express.json({ limit: '10kb' }));
 
-/** Routes du site (comptes, clients, documents, rendez-vous) : voir src/serveur. Sur Vercel, ce sont les fonctions de api/. */
+/** Routes protégées par la session Supabase (voir src/serveur). Sur Vercel, ce sont les fonctions de api/. */
 const route = (h: (r: Requete) => Promise<Reponse>) => async (req: express.Request, res: express.Response) => {
   const r = await h({ method: req.method, headers: req.headers, body: req.body, query: req.query });
-  for (const [k, v] of Object.entries(r.entetes ?? {})) res.setHeader(k, v);
-  if (r.binaire) res.status(r.status).send(r.binaire);
-  else res.status(r.status).json(r.corps ?? {});
+  res.status(r.status).json(r.corps);
 };
-app.all('/api/auth', route(routes.auth));
-app.all('/api/clients', route(routes.clients));
-app.all('/api/documents', route(routes.documents));
-app.get('/api/rdv', route(routes.rdv));
-app.post('/api/seance', route(routes.seance));
+app.get('/api/rdv', route(rdv));
+app.post('/api/seance', route(seance));
+app.all('/api/clients', route(clients));
 
 /**
  * Demande de devis : envoie les informations du prospect par e-mail à Youcef,

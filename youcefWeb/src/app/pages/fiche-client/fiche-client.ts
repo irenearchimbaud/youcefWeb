@@ -73,7 +73,7 @@ import { Document, TAILLE_MAX_DOCUMENT, TYPES_DOCUMENT, estVisualisable, formate
             <input id="titre" name="titre" [(ngModel)]="titre" [placeholder]="'Ex. Compte rendu – séance 3' | tr: 'E.g. Report – session 3'" />
             <label for="fichier">{{ 'Fichier' | tr: 'File' }}</label>
             <input id="fichier" name="fichier" type="file" [accept]="types" (change)="choisir($event)" />
-            <small class="aide">{{ 'PDF, images, Word ou texte · 4 Mo maximum.' | tr: 'PDF, images, Word or text · 4 MB maximum.' }}</small>
+            <small class="aide">{{ 'PDF, images, Word ou texte · 10 Mo maximum.' | tr: 'PDF, images, Word or text · 10 MB maximum.' }}</small>
             @if (erreur()) {
               <p class="erreur" role="alert">{{ texteErreur() }}</p>
             }
@@ -199,11 +199,11 @@ export class FicheClient {
   protected readonly texteErreur = computed(() => {
     switch (this.erreur()) {
       case 'trop-gros':
-        return this.i18n.t('Ce fichier dépasse 4 Mo.', 'This file exceeds 4 MB.');
+        return this.i18n.t('Ce fichier dépasse 10 Mo.', 'This file exceeds 10 MB.');
       case 'stockage':
         return this.i18n.t(
-          "Le document n'a pas pu être enregistré (format non accepté ou fichier trop volumineux ?).",
-          'The document could not be saved (unsupported format or file too large?).',
+          "Le document n'a pas pu être enregistré (espace de stockage insuffisant ?).",
+          'The document could not be saved (not enough storage space?).',
         );
       case 'introuvable':
         return this.i18n.t('Fichier introuvable.', 'File not found.');

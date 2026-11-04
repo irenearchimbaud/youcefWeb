@@ -1,15 +1,38 @@
 import { Injectable, effect, inject, signal, untracked } from '@angular/core';
 import { AuthService } from './auth.service';
 import { Document, Utilisateur } from './models';
+import { Supabase } from './supabase';
 
-type ReponseDocument = Omit<Document, 'date'> & { date: string };
+type LigneDocument = {
+  id: string;
+  client_id: string;
+  titre: string;
+  fichier: string;
+  type: string;
+  taille: number;
+  chemin: string;
+  created_at: string;
+};
 
-const versDocument = (d: ReponseDocument): Document => ({ ...d, date: d.date.slice(0, 10) });
+const versDocument = (l: LigneDocument): Document => ({
+  id: l.id,
+  clientId: l.client_id,
+  titre: l.titre,
+  date: l.created_at.slice(0, 10),
+  fichier: l.fichier,
+  type: l.type,
+  taille: l.taille,
+  chemin: l.chemin,
+});
 
-/** Données du site, stockées sur le serveur (src/serveur). Le serveur ne renvoie à chacun que ce qui le concerne. */
+/** Nom de fichier sûr pour le stockage (sans accents ni caractères spéciaux). */
+const nomSur = (nom: string): string => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+
+/** Données du site, stockées dans Supabase. Les règles d'accès (RLS) garantissent que chacun ne voit que ses propres données. */
 @Injectable({ providedIn: 'root' })
 export class DataService {
   private readonly auth = inject(AuthService);
+  private readonly supabase = inject(Supabase);
 
   /** Clients de Youcef (vide pour un client). */
   readonly clients = signal<Utilisateur[]>([]);
@@ -20,7 +43,7 @@ export class DataService {
     effect(() => {
       const u = this.auth.utilisateur();
       untracked(() => {
-        if (!u || u.doitChangerMdp) {
+        if (!u) {
           this.clients.set([]);
           this.documents.set([]);
         } else {
@@ -39,47 +62,48 @@ export class DataService {
   }
 
   async recharger(pro = this.auth.utilisateur()?.role === 'pro'): Promise<void> {
-    try {
-      const [docs, clients] = await Promise.all([
-        this.auth.appelerApi('/api/documents'),
-        pro ? this.auth.appelerApi('/api/clients') : Promise.resolve(null),
-      ]);
-      if (docs.ok) this.documents.set(((await docs.json()).documents as ReponseDocument[]).map(versDocument));
-      if (clients?.ok) this.clients.set((await clients.json()).clients);
-    } catch {
-      // Garde l'affichage précédent : une coupure réseau ne doit pas vider les listes.
+    const sb = this.supabase.db;
+    const [docs, clients] = await Promise.all([
+      sb.from('documents').select('*').order('created_at', { ascending: false }),
+      pro ? sb.from('profiles').select('id, nom, email, role, solde, doit_changer_mdp').eq('role', 'client').order('nom') : Promise.resolve(null),
+    ]);
+    if (docs.data) this.documents.set((docs.data as LigneDocument[]).map(versDocument));
+    if (clients?.data) {
+      this.clients.set(
+        clients.data.map((c) => ({ id: c.id, nom: c.nom, email: c.email, role: c.role, solde: c.solde, doitChangerMdp: c.doit_changer_mdp })),
+      );
     }
   }
 
-  private async appel(chemin: string, init: RequestInit): Promise<any> {
-    const r = await this.auth.appelerApi(chemin, init);
-    const corps = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(corps.erreur ?? String(r.status));
-    return corps;
-  }
-
-  // --- Clients (gérés par Youcef) ---
+  // --- Clients (gérés par Youcef ; création, nouveau code et suppression passent par le serveur) ---
 
   async ajouterClient(nom: string, email: string, solde: number): Promise<{ client: Utilisateur; code: string }> {
-    const corps = await this.appel('/api/clients', { method: 'POST', body: JSON.stringify({ nom, email, solde }) });
+    const r = await this.auth.appelerApi('/api/clients', { method: 'POST', body: JSON.stringify({ nom, email, solde }) });
+    const corps = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(corps.erreur ?? String(r.status));
     await this.recharger();
-    return corps;
+    return { client: this.utilisateur(corps.client.id)!, code: corps.code };
   }
 
   async regenererCode(id: string): Promise<string> {
-    const corps = await this.appel('/api/clients', { method: 'PATCH', body: JSON.stringify({ id, action: 'code' }) });
+    const r = await this.auth.appelerApi('/api/clients', { method: 'PATCH', body: JSON.stringify({ id }) });
+    const corps = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(corps.erreur ?? String(r.status));
     await this.recharger();
     return corps.code;
   }
 
   async supprimerClient(id: string): Promise<void> {
-    await this.appel(`/api/clients?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    const r = await this.auth.appelerApi(`/api/clients?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(String(r.status));
     await this.recharger();
   }
 
   async definirSolde(id: string, solde: number): Promise<void> {
-    const { client } = await this.appel('/api/clients', { method: 'PATCH', body: JSON.stringify({ id, solde }) });
-    this.clients.update((l) => l.map((c) => (c.id === id ? client : c)));
+    const valeur = Math.max(0, Math.floor(solde));
+    const { error } = await this.supabase.db.from('profiles').update({ solde: valeur }).eq('id', id);
+    if (error) throw error;
+    this.clients.update((l) => l.map((c) => (c.id === id ? { ...c, solde: valeur } : c)));
   }
 
   /** Après une réservation Calendly : le serveur vérifie la réservation et décompte la séance. */
@@ -93,34 +117,50 @@ export class DataService {
   // --- Documents ---
 
   async ajouterDocument(clientId: string, titre: string, fichier: File): Promise<void> {
-    const params = new URLSearchParams({ clientId, titre: titre.trim() || fichier.name, nom: fichier.name, type: fichier.type });
-    const r = await this.auth.appelerApi(`/api/documents?${params}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/octet-stream' },
-      body: fichier,
+    const sb = this.supabase.db;
+    const chemin = `${clientId}/${crypto.randomUUID()}-${nomSur(fichier.name)}`;
+    const envoi = await sb.storage.from('documents').upload(chemin, fichier, { contentType: fichier.type || undefined });
+    if (envoi.error) throw envoi.error;
+    const { error } = await sb.from('documents').insert({
+      client_id: clientId,
+      titre: titre.trim() || fichier.name,
+      fichier: fichier.name,
+      type: fichier.type || 'application/octet-stream',
+      taille: fichier.size,
+      chemin,
     });
-    if (!r.ok) throw new Error(((await r.json().catch(() => ({}))).erreur as string) ?? String(r.status));
+    if (error) {
+      await sb.storage.from('documents').remove([chemin]);
+      throw error;
+    }
     await this.recharger();
   }
 
   async supprimerDocument(doc: Document): Promise<void> {
-    await this.appel(`/api/documents?id=${doc.id}&clientId=${doc.clientId}`, { method: 'DELETE' });
+    const sb = this.supabase.db;
+    const { error } = await sb.from('documents').delete().eq('id', doc.id);
+    if (error) throw error;
+    await sb.storage.from('documents').remove([doc.chemin]);
     this.documents.update((l) => l.filter((d) => d.id !== doc.id));
   }
 
-  private lien(doc: Document, telecharger: boolean): string {
-    return `/api/documents?id=${doc.id}&clientId=${doc.clientId}${telecharger ? '&telecharger=1' : ''}`;
-  }
-
-  /** Ouvre le document dans un nouvel onglet (le cookie de session suffit : pas de lien public). */
+  /** Ouvre le document dans un nouvel onglet (à appeler directement depuis le clic, sinon le navigateur bloque la fenêtre). */
   async visualiser(doc: Document): Promise<boolean> {
-    window.open(this.lien(doc, false), '_blank', 'noopener');
+    const fenetre = window.open('', '_blank');
+    const { data } = await this.supabase.db.storage.from('documents').createSignedUrl(doc.chemin, 60);
+    if (!data?.signedUrl) {
+      fenetre?.close();
+      return false;
+    }
+    if (fenetre) fenetre.location.href = data.signedUrl;
     return true;
   }
 
   async telecharger(doc: Document): Promise<boolean> {
+    const { data } = await this.supabase.db.storage.from('documents').createSignedUrl(doc.chemin, 60, { download: doc.fichier });
+    if (!data?.signedUrl) return false;
     const a = document.createElement('a');
-    a.href = this.lien(doc, true);
+    a.href = data.signedUrl;
     a.download = doc.fichier;
     a.click();
     return true;

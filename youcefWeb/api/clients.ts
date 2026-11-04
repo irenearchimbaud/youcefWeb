@@ -1,4 +1,5 @@
-import { routes } from '../src/serveur/routes';
+import { clients } from '../src/serveur/clients';
 import { versVercel } from '../src/serveur/vercel';
 
-export default versVercel(routes.clients);
+/** Équivalent Vercel de la route Express /api/clients de src/server.ts. */
+export default versVercel(clients);
