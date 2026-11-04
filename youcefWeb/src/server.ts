@@ -6,7 +6,10 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
-import * as calendly from './calendly';
+import { clients } from './serveur/clients';
+import { Reponse, Requete } from './serveur/commun';
+import { rdv } from './serveur/rdv';
+import { seance } from './serveur/seance';
 import { traiterDevis } from './devis';
 
 // Charge le fichier .env (jeton Calendly) s'il existe.
@@ -30,24 +33,14 @@ const angularApp = new AngularNodeAppEngine();
 
 app.use('/api', express.json({ limit: '10kb' }));
 
-/**
- * Rendez-vous Calendly à venir. `?client=<id>` limite la liste à un client.
- * NB : l'authentification du site étant encore une démonstration côté navigateur, cette route n'est pas protégée.
- */
-app.get('/api/rdv', async (req, res) => {
-  if (!calendly.configure()) {
-    res.json({ configure: false, rdv: [] });
-    return;
-  }
-  try {
-    const { client, frais } = req.query;
-    const rdv = await calendly.prochainsRdv(frais === '1');
-    res.json({ configure: true, rdv: typeof client === 'string' ? rdv.filter((r) => r.clientId === client) : rdv });
-  } catch (e) {
-    console.error('Lecture de Calendly impossible', e);
-    res.status(502).json({ erreur: 'Calendly indisponible.' });
-  }
-});
+/** Routes protégées par la session Supabase (voir src/serveur). Sur Vercel, ce sont les fonctions de api/. */
+const route = (h: (r: Requete) => Promise<Reponse>) => async (req: express.Request, res: express.Response) => {
+  const r = await h({ method: req.method, headers: req.headers, body: req.body, query: req.query });
+  res.status(r.status).json(r.corps);
+};
+app.get('/api/rdv', route(rdv));
+app.post('/api/seance', route(seance));
+app.all('/api/clients', route(clients));
 
 /**
  * Demande de devis : envoie les informations du prospect par e-mail à Youcef,

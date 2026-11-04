@@ -1,159 +1,168 @@
-import { Injectable, PLATFORM_ID, inject, signal } from '@angular/core';
-import { isPlatformBrowser } from '@angular/common';
+import { Injectable, effect, inject, signal, untracked } from '@angular/core';
+import { AuthService } from './auth.service';
 import { Document, Utilisateur } from './models';
-import { enregistrerFichier, lireFichier, supprimerFichier } from './fichiers';
+import { Supabase } from './supabase';
 
-const CLES = {
-  utilisateurs: 'youcef-utilisateurs',
-  documents: 'youcef-documents',
+type LigneDocument = {
+  id: string;
+  client_id: string;
+  titre: string;
+  fichier: string;
+  type: string;
+  taille: number;
+  chemin: string;
+  created_at: string;
 };
 
-// Données de démonstration, en attendant la base SQL.
-const UTILISATEURS: Utilisateur[] = [
-  { id: 'u1', identifiant: 'youcef', code: 'pro123', nom: 'Youcef', role: 'pro', solde: 0 },
-  { id: 'u2', identifiant: 'marie-dupont', code: 'K7M2-QX9P', nom: 'Marie Dupont', role: 'client', solde: 10 },
-  { id: 'u3', identifiant: 'paul-martin', code: 'T4NR-8WHD', nom: 'Paul Martin', role: 'client', solde: 5 },
-];
+const versDocument = (l: LigneDocument): Document => ({
+  id: l.id,
+  clientId: l.client_id,
+  titre: l.titre,
+  date: l.created_at.slice(0, 10),
+  fichier: l.fichier,
+  type: l.type,
+  taille: l.taille,
+  chemin: l.chemin,
+});
 
-// Sans caractères ambigus (0/O, 1/I/L).
-const ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+/** Nom de fichier sûr pour le stockage (sans accents ni caractères spéciaux). */
+const nomSur = (nom: string): string => nom.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
 
-export const genererCode = (): string => {
-  const octets = crypto.getRandomValues(new Uint8Array(8));
-  const c = Array.from(octets, (o) => ALPHABET[o % ALPHABET.length]).join('');
-  return `${c.slice(0, 4)}-${c.slice(4)}`;
-};
-
-const slug = (nom: string): string =>
-  nom.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'client';
-
+/** Données du site, stockées dans Supabase. Les règles d'accès (RLS) garantissent que chacun ne voit que ses propres données. */
 @Injectable({ providedIn: 'root' })
 export class DataService {
-  private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
+  private readonly auth = inject(AuthService);
+  private readonly supabase = inject(Supabase);
 
-  readonly utilisateurs = signal<Utilisateur[]>(this.lire(CLES.utilisateurs, UTILISATEURS));
-  readonly documents = signal<Document[]>(this.lire(CLES.documents, []));
+  /** Clients de Youcef (vide pour un client). */
+  readonly clients = signal<Utilisateur[]>([]);
+  /** Documents visibles par la personne connectée (tous pour Youcef, les siens pour un client). */
+  readonly documents = signal<Document[]>([]);
 
-  clients(): Utilisateur[] {
-    return this.utilisateurs().filter((u) => u.role === 'client');
+  constructor() {
+    effect(() => {
+      const u = this.auth.utilisateur();
+      untracked(() => {
+        if (!u) {
+          this.clients.set([]);
+          this.documents.set([]);
+        } else {
+          void this.recharger(u.role === 'pro');
+        }
+      });
+    });
   }
 
   utilisateur(id: string): Utilisateur | undefined {
-    return this.utilisateurs().find((u) => u.id === id);
+    return this.clients().find((u) => u.id === id) ?? (this.auth.utilisateur()?.id === id ? this.auth.utilisateur()! : undefined);
   }
 
   documentsDe(clientId: string): Document[] {
     return this.documents().filter((d) => d.clientId === clientId);
   }
 
-  // --- Clients (gérés par Youcef) ---
-
-  ajouterClient(nom: string, solde: number): Utilisateur {
-    const base = slug(nom);
-    let identifiant = base;
-    for (let i = 2; this.utilisateurs().some((u) => u.identifiant === identifiant); i++) identifiant = `${base}-${i}`;
-    const client: Utilisateur = { id: crypto.randomUUID(), identifiant, code: genererCode(), nom: nom.trim(), role: 'client', solde };
-    this.majUtilisateurs([...this.utilisateurs(), client]);
-    return client;
+  async recharger(pro = this.auth.utilisateur()?.role === 'pro'): Promise<void> {
+    const sb = this.supabase.db;
+    const [docs, clients] = await Promise.all([
+      sb.from('documents').select('*').order('created_at', { ascending: false }),
+      pro ? sb.from('profiles').select('id, nom, email, role, solde, doit_changer_mdp').eq('role', 'client').order('nom') : Promise.resolve(null),
+    ]);
+    if (docs.data) this.documents.set((docs.data as LigneDocument[]).map(versDocument));
+    if (clients?.data) {
+      this.clients.set(
+        clients.data.map((c) => ({ id: c.id, nom: c.nom, email: c.email, role: c.role, solde: c.solde, doitChangerMdp: c.doit_changer_mdp })),
+      );
+    }
   }
 
-  supprimerClient(id: string): void {
-    this.majUtilisateurs(this.utilisateurs().filter((u) => u.id !== id));
-    this.documentsDe(id).forEach((d) => void supprimerFichier(d.id).catch(() => {}));
-    this.majDocuments(this.documents().filter((d) => d.clientId !== id));
+  // --- Clients (gérés par Youcef ; création, nouveau code et suppression passent par le serveur) ---
+
+  async ajouterClient(nom: string, email: string, solde: number): Promise<{ client: Utilisateur; code: string }> {
+    const r = await this.auth.appelerApi('/api/clients', { method: 'POST', body: JSON.stringify({ nom, email, solde }) });
+    const corps = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(corps.erreur ?? String(r.status));
+    await this.recharger();
+    return { client: this.utilisateur(corps.client.id)!, code: corps.code };
+  }
+
+  async regenererCode(id: string): Promise<string> {
+    const r = await this.auth.appelerApi('/api/clients', { method: 'PATCH', body: JSON.stringify({ id }) });
+    const corps = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(corps.erreur ?? String(r.status));
+    await this.recharger();
+    return corps.code;
+  }
+
+  async supprimerClient(id: string): Promise<void> {
+    const r = await this.auth.appelerApi(`/api/clients?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+    if (!r.ok) throw new Error(String(r.status));
+    await this.recharger();
+  }
+
+  async definirSolde(id: string, solde: number): Promise<void> {
+    const valeur = Math.max(0, Math.floor(solde));
+    const { error } = await this.supabase.db.from('profiles').update({ solde: valeur }).eq('id', id);
+    if (error) throw error;
+    this.clients.update((l) => l.map((c) => (c.id === id ? { ...c, solde: valeur } : c)));
+  }
+
+  /** Après une réservation Calendly : le serveur vérifie la réservation et décompte la séance. */
+  async consommerSeance(): Promise<number> {
+    const r = await this.auth.appelerApi('/api/seance', { method: 'POST' });
+    const corps = await r.json().catch(() => ({}));
+    await this.auth.rafraichirProfil();
+    return r.ok ? (corps.decomptees ?? 0) : 0;
   }
 
   // --- Documents ---
 
-  async ajouterDocument(clientId: string, titre: string, fichier: File): Promise<Document> {
-    const doc: Document = {
-      id: crypto.randomUUID(),
-      clientId,
+  async ajouterDocument(clientId: string, titre: string, fichier: File): Promise<void> {
+    const sb = this.supabase.db;
+    const chemin = `${clientId}/${crypto.randomUUID()}-${nomSur(fichier.name)}`;
+    const envoi = await sb.storage.from('documents').upload(chemin, fichier, { contentType: fichier.type || undefined });
+    if (envoi.error) throw envoi.error;
+    const { error } = await sb.from('documents').insert({
+      client_id: clientId,
       titre: titre.trim() || fichier.name,
-      date: new Date().toISOString().slice(0, 10),
       fichier: fichier.name,
       type: fichier.type || 'application/octet-stream',
       taille: fichier.size,
-    };
-    await enregistrerFichier(doc.id, fichier);
-    this.majDocuments([...this.documents(), doc]);
-    return doc;
+      chemin,
+    });
+    if (error) {
+      await sb.storage.from('documents').remove([chemin]);
+      throw error;
+    }
+    await this.recharger();
   }
 
-  async supprimerDocument(id: string): Promise<void> {
-    await supprimerFichier(id);
-    this.majDocuments(this.documents().filter((d) => d.id !== id));
-  }
-
-  contenuDocument(id: string): Promise<Blob | undefined> {
-    return lireFichier(id);
+  async supprimerDocument(doc: Document): Promise<void> {
+    const sb = this.supabase.db;
+    const { error } = await sb.from('documents').delete().eq('id', doc.id);
+    if (error) throw error;
+    await sb.storage.from('documents').remove([doc.chemin]);
+    this.documents.update((l) => l.filter((d) => d.id !== doc.id));
   }
 
   /** Ouvre le document dans un nouvel onglet (à appeler directement depuis le clic, sinon le navigateur bloque la fenêtre). */
   async visualiser(doc: Document): Promise<boolean> {
     const fenetre = window.open('', '_blank');
-    const blob = await lireFichier(doc.id);
-    if (!blob) {
+    const { data } = await this.supabase.db.storage.from('documents').createSignedUrl(doc.chemin, 60);
+    if (!data?.signedUrl) {
       fenetre?.close();
       return false;
     }
-    const url = URL.createObjectURL(new Blob([blob], { type: doc.type }));
-    if (fenetre) fenetre.location.href = url;
-    setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    if (fenetre) fenetre.location.href = data.signedUrl;
     return true;
   }
 
   async telecharger(doc: Document): Promise<boolean> {
-    const blob = await lireFichier(doc.id);
-    if (!blob) return false;
-    const url = URL.createObjectURL(blob);
+    const { data } = await this.supabase.db.storage.from('documents').createSignedUrl(doc.chemin, 60, { download: doc.fichier });
+    if (!data?.signedUrl) return false;
     const a = document.createElement('a');
-    a.href = url;
+    a.href = data.signedUrl;
     a.download = doc.fichier;
     a.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
     return true;
-  }
-
-  ajusterSolde(id: string, delta: number): void {
-    this.definirSolde(id, (this.utilisateur(id)?.solde ?? 0) + delta);
-  }
-
-  definirSolde(id: string, solde: number): void {
-    const valeur = Math.max(0, Math.floor(solde));
-    this.majUtilisateurs(this.utilisateurs().map((u) => (u.id === id ? { ...u, solde: valeur } : u)));
-  }
-
-  regenererCode(id: string): void {
-    this.majUtilisateurs(this.utilisateurs().map((u) => (u.id === id ? { ...u, code: genererCode() } : u)));
-  }
-
-  /** Décompte une séance du solde (appelé quand le client vient de réserver via Calendly). */
-  consommerSeance(clientId: string): void {
-    this.ajusterSolde(clientId, -1);
-  }
-
-  private majDocuments(liste: Document[]): void {
-    this.documents.set(liste);
-    this.ecrire(CLES.documents, liste);
-  }
-
-  private majUtilisateurs(liste: Utilisateur[]): void {
-    this.utilisateurs.set(liste);
-    this.ecrire(CLES.utilisateurs, liste);
-  }
-
-  private ecrire(cle: string, valeur: unknown): void {
-    if (this.navigateur) localStorage.setItem(cle, JSON.stringify(valeur));
-  }
-
-  private lire<T>(cle: string, defaut: T): T {
-    if (!this.navigateur) return defaut;
-    try {
-      const brut = localStorage.getItem(cle);
-      return brut ? JSON.parse(brut) : defaut;
-    } catch {
-      return defaut;
-    }
   }
 }
