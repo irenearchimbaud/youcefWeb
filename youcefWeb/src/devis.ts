@@ -9,7 +9,7 @@ const dernierEnvoi = new Map<string, number>();
 
 export interface ReponseDevis {
   status: number;
-  corps: { ok?: true; erreur?: string };
+  corps: { ok?: true; erreur?: string; diagnostic?: string };
 }
 
 export async function traiterDevis(body: unknown, ip: string): Promise<ReponseDevis> {
@@ -58,6 +58,10 @@ export async function traiterDevis(body: unknown, ip: string): Promise<ReponseDe
     return { status: 200, corps: { ok: true } };
   } catch (e) {
     console.error('Envoi de la demande de devis impossible', e);
-    return { status: 502, corps: { erreur: "L'envoi a échoué. Merci de réessayer plus tard." } };
+    const { code, responseCode } = e as { code?: string; responseCode?: number };
+    return {
+      status: 502,
+      corps: { erreur: "L'envoi a échoué. Merci de réessayer plus tard.", diagnostic: [code, responseCode].filter(Boolean).join(' ') || 'inconnu' },
+    };
   }
 }
