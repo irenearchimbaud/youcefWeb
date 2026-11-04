@@ -3,6 +3,7 @@ import { roleGuard } from './core/guards';
 
 export const routes: Routes = [
   { path: '', pathMatch: 'full', loadComponent: () => import('./pages/home/home').then((m) => m.Home) },
+  { path: 'devis', loadComponent: () => import('./pages/devis/devis').then((m) => m.Devis) },
   { path: 'login', loadComponent: () => import('./pages/login/login').then((m) => m.Login) },
   {
     path: 'mentions-legales',

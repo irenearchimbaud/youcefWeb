@@ -6,12 +6,22 @@ import {
 } from '@angular/ssr/node';
 import express from 'express';
 import { join } from 'node:path';
+import nodemailer from 'nodemailer';
 import * as calendly from './calendly';
 
 // Charge le fichier .env (jeton Calendly) s'il existe.
 try {
   process.loadEnvFile();
-} catch {}
+} catch (e) {
+  if ((e as NodeJS.ErrnoException).code === 'ENOENT') {
+    console.warn(`Aucun fichier .env trouvé dans ${process.cwd()} : copiez .env.example en .env.`);
+  } else {
+    console.warn('Lecture du fichier .env impossible (Node ≥ 20.12 requis) :', e);
+  }
+}
+if (!process.env['CALENDLY_TOKEN']) {
+  console.warn('CALENDLY_TOKEN est vide : les rendez-vous Calendly ne seront pas affichés.');
+}
 
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
@@ -36,6 +46,69 @@ app.get('/api/rdv', async (req, res) => {
   } catch (e) {
     console.error('Lecture de Calendly impossible', e);
     res.status(502).json({ erreur: 'Calendly indisponible.' });
+  }
+});
+
+const echapper = (t: string): string =>
+  t.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string);
+const texte = (v: unknown, max: number): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+const dernierEnvoi = new Map<string, number>();
+
+/**
+ * Demande de devis : envoie les informations du prospect par e-mail à Youcef,
+ * qui crée ensuite son compte dans l'espace membre.
+ */
+app.post('/api/devis', async (req, res) => {
+  const b = req.body ?? {};
+  const nom = texte(b.nom, 100);
+  const email = texte(b.email, 150);
+  const telephone = texte(b.telephone, 30);
+  const formule = texte(b.formule, 100);
+  const message = texte(b.message, 3000);
+
+  if (texte(b.siteWeb, 100)) {
+    // champ piège anti-robots
+    res.json({ ok: true });
+    return;
+  }
+  if (!nom || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || !message) {
+    res.status(400).json({ erreur: 'Merci de renseigner votre nom, un e-mail valide et votre message.' });
+    return;
+  }
+  const maintenant = Date.now();
+  if (maintenant - (dernierEnvoi.get(req.ip ?? '') ?? 0) < 30_000) {
+    res.status(429).json({ erreur: 'Merci de patienter quelques secondes avant un nouvel envoi.' });
+    return;
+  }
+  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, DEVIS_DESTINATAIRE } = process.env;
+  if (!SMTP_HOST || !DEVIS_DESTINATAIRE) {
+    console.error('SMTP_HOST ou DEVIS_DESTINATAIRE manquant : demande de devis non envoyée.');
+    res.status(503).json({ erreur: "L'envoi n'est pas disponible pour le moment. Merci de réessayer plus tard." });
+    return;
+  }
+  try {
+    const transport = nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: Number(SMTP_PORT) || 587,
+      secure: Number(SMTP_PORT) === 465,
+      auth: SMTP_USER ? { user: SMTP_USER, pass: SMTP_PASS } : undefined,
+    });
+    await transport.sendMail({
+      from: process.env['DEVIS_EXPEDITEUR'] || SMTP_USER || DEVIS_DESTINATAIRE,
+      to: DEVIS_DESTINATAIRE,
+      replyTo: { name: nom.replace(/[\r\n"<>]/g, ' '), address: email },
+      subject: `Demande de devis – ${nom.replace(/[\r\n]/g, ' ')}`,
+      text: `Nom : ${nom}\nE-mail : ${email}\nTéléphone : ${telephone || '—'}\nFormule : ${formule || '—'}\n\n${message}`,
+      html: `<h2>Nouvelle demande de devis</h2>
+<p><strong>Nom :</strong> ${echapper(nom)}<br><strong>E-mail :</strong> ${echapper(email)}<br>
+<strong>Téléphone :</strong> ${echapper(telephone) || '—'}<br><strong>Formule :</strong> ${echapper(formule) || '—'}</p>
+<p>${echapper(message).replace(/\n/g, '<br>')}</p>`,
+    });
+    dernierEnvoi.set(req.ip ?? '', maintenant);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error('Envoi de la demande de devis impossible', e);
+    res.status(502).json({ erreur: "L'envoi a échoué. Merci de réessayer plus tard." });
   }
 });
 
