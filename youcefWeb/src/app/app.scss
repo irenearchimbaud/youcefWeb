@@ -190,3 +190,23 @@ footer {
     .mentions { text-align: left; }
   }
 }
+
+.langues {
+  display: flex;
+  border: 1.5px solid var(--champagne);
+  border-radius: 999px;
+  overflow: hidden;
+
+  button {
+    padding: 0.3rem 0.7rem;
+    border: 0;
+    background: transparent;
+    font: 600 0.78rem var(--sans);
+    letter-spacing: 0.04em;
+    color: var(--texte-doux);
+    cursor: pointer;
+
+    &.actif { background: var(--bleu-profond); color: var(--ivoire-clair); }
+    &:hover:not(.actif) { background: var(--bleu-diamant); }
+  }
+}

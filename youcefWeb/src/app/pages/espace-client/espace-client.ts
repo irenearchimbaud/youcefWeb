@@ -1,6 +1,7 @@
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { I18n, TrPipe } from '../../core/i18n';
 import { AuthService } from '../../core/auth.service';
 import { CALENDLY_URL } from '../../core/config';
 import { DataService } from '../../core/data.service';
@@ -8,15 +9,16 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
 
 @Component({
   selector: 'app-espace-client',
+  imports: [TrPipe],
   template: `
     <section class="bandeau">
       <div class="conteneur">
-        <span class="sur-titre">Mon espace</span>
-        <h1>Bonjour {{ prenom() }}</h1>
+        <span class="sur-titre">{{ 'Mon espace' | tr: 'My client area' }}</span>
+        <h1>{{ 'Bonjour' | tr: 'Hello' }} {{ prenom() }}</h1>
         <div class="stats">
-          <div><strong>{{ utilisateur().solde }}</strong><span>séance(s) restante(s)</span></div>
-          <div><strong>{{ rdv().length }}</strong><span>séance(s) à venir</span></div>
-          <div><strong>{{ documents().length }}</strong><span>documents</span></div>
+          <div><strong>{{ utilisateur().solde }}</strong><span>{{ 'séance(s) restante(s)' | tr: 'session(s) remaining' }}</span></div>
+          <div><strong>{{ rdv().length }}</strong><span>{{ 'séance(s) à venir' | tr: 'upcoming session(s)' }}</span></div>
+          <div><strong>{{ documents().length }}</strong><span>{{ 'documents' | tr: 'documents' }}</span></div>
         </div>
       </div>
     </section>
@@ -24,9 +26,9 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
     <div class="conteneur grille">
       <div class="colonne">
         <section class="carte">
-          <h2>Mes documents</h2>
+          <h2>{{ 'Mes documents' | tr: 'My documents' }}</h2>
           @if (erreurDoc()) {
-            <p class="erreur" role="alert">{{ erreurDoc() }}</p>
+            <p class="erreur" role="alert">{{ 'Ce document est introuvable.' | tr: 'This document could not be found.' }}</p>
           }
           @for (d of documents(); track d.id) {
             <div class="ligne">
@@ -35,44 +37,44 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
               </span>
               <div class="infos">
                 <strong>{{ d.titre }}</strong>
-                <small>{{ d.date }} · {{ taille(d.taille) }}</small>
+                <small>{{ d.date }} · {{ taille(d.taille, i18n.langue()) }}</small>
               </div>
               <div class="actions">
                 @if (visualisable(d)) {
-                  <button type="button" class="btn secondaire petit" (click)="voir(d)">Voir</button>
+                  <button type="button" class="btn secondaire petit" (click)="voir(d)">{{ 'Voir' | tr: 'View' }}</button>
                 }
-                <button type="button" class="btn secondaire petit" (click)="telecharger(d)">Télécharger</button>
+                <button type="button" class="btn secondaire petit" (click)="telecharger(d)">{{ 'Télécharger' | tr: 'Download' }}</button>
               </div>
             </div>
           } @empty {
-            <p class="vide">Aucun document pour le moment.</p>
+            <p class="vide">{{ 'Aucun document pour le moment.' | tr: 'No documents yet.' }}</p>
           }
         </section>
 
         <section class="carte">
-          <h2>Mes séances</h2>
+          <h2>{{ 'Mes séances' | tr: 'My sessions' }}</h2>
           @if (chargementRdv()) {
-            <p class="chargement" role="status">Chargement de vos séances…</p>
+            <p class="chargement" role="status">{{ 'Chargement de vos séances…' | tr: 'Loading your sessions…' }}</p>
           }
           @for (r of rdv(); track r.id) {
             <div class="ligne">
               <div class="infos">
-                <strong>{{ creneau(r.debut, r.fin) }}</strong>
+                <strong>{{ creneau(r.debut, r.fin, i18n.locale()) }}</strong>
                 <small>{{ r.titre }}</small>
               </div>
               @if (r.lien) {
-                <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">Rejoindre</a>
+                <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">{{ 'Rejoindre' | tr: 'Join' }}</a>
               }
             </div>
           } @empty {
             @if (!chargementRdv()) {
               @if (erreurRdv()) {
                 <p class="vide">
-                  Vos séances n'ont pas pu être chargées.
-                  <button type="button" class="lien" (click)="charger(true)">Réessayer</button>
+                  {{ "Vos séances n'ont pas pu être chargées." | tr: 'Your sessions could not be loaded.' }}
+                  <button type="button" class="lien" (click)="charger(true)">{{ 'Réessayer' | tr: 'Try again' }}</button>
                 </p>
               } @else {
-                <p class="vide">Vous n'avez aucune séance à venir.</p>
+                <p class="vide">{{ "Vous n'avez aucune séance à venir." | tr: 'You have no upcoming sessions.' }}</p>
               }
             }
           }
@@ -80,25 +82,24 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
       </div>
 
       <aside class="carte demande">
-        <h2>Réserver une séance</h2>
+        <h2>{{ 'Réserver une séance' | tr: 'Book a session' }}</h2>
         @if (utilisateur().solde < 1) {
-          <p class="aide">Votre solde de séances est épuisé. Contactez Youcef pour en obtenir de nouvelles.</p>
+          <p class="aide">{{ 'Votre solde de séances est épuisé. Contactez Youcef pour en obtenir de nouvelles.' | tr: 'Your balance of sessions is used up. Contact Youcef to get more.' }}</p>
         } @else {
           <p class="aide">
-            Choisissez un créneau dans l'agenda de Youcef. La séance est ajoutée à son Google Agenda
-            et une confirmation vous est envoyée par e-mail.
+            {{ "Choisissez un créneau dans l'agenda de Youcef. La séance est ajoutée à son Google Agenda et une confirmation vous est envoyée par e-mail." | tr: "Choose a slot in Youcef's calendar. The session is added to his Google Calendar and a confirmation is sent to you by email." }}
           </p>
           @if (calendly(); as url) {
             @if (!calendlyPret()) {
-              <p class="chargement" role="status">Chargement de l'agenda…</p>
+              <p class="chargement" role="status">{{ "Chargement de l'agenda…" | tr: 'Loading the calendar…' }}</p>
             }
-            <iframe class="calendly" [class.cache]="!calendlyPret()" [src]="url" title="Réservation d'une séance" (load)="calendlyPret.set(true)"></iframe>
+            <iframe class="calendly" [class.cache]="!calendlyPret()" [src]="url" [title]="'Réservation d’une séance' | tr: 'Session booking'" (load)="calendlyPret.set(true)"></iframe>
           } @else {
-            <p class="chargement" role="status">Chargement de l'agenda…</p>
+            <p class="chargement" role="status">{{ "Chargement de l'agenda…" | tr: 'Loading the calendar…' }}</p>
           }
         }
         @if (retour()) {
-          <p class="retour" role="status">{{ retour() }}</p>
+          <p class="retour" role="status">{{ 'Séance réservée : une confirmation vous est envoyée par e-mail.' | tr: 'Session booked: a confirmation is being sent to you by email.' }}</p>
         }
       </aside>
     </div>
@@ -168,6 +169,7 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
   `,
 })
 export class EspaceClient {
+  protected readonly i18n = inject(I18n);
   private readonly auth = inject(AuthService);
   private readonly data = inject(DataService);
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));

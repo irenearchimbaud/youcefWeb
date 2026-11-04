@@ -2,20 +2,21 @@ import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core'
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { I18n, TrPipe } from '../../core/i18n';
 import { DataService } from '../../core/data.service';
 import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models';
 
 @Component({
   selector: 'app-espace-pro',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TrPipe],
   template: `
     <section class="bandeau">
       <div class="conteneur">
-        <span class="sur-titre">Espace professionnel</span>
-        <h1>Bonjour Youcef</h1>
+        <span class="sur-titre">{{ 'Espace professionnel' | tr: 'Professional area' }}</span>
+        <h1>{{ 'Bonjour Youcef' | tr: 'Hello Youcef' }}</h1>
         <div class="stats">
-          <div><strong>{{ rdv().length }}</strong><span>rendez-vous à venir</span></div>
-          <div><strong>{{ clients().length }}</strong><span>clients</span></div>
+          <div><strong>{{ rdv().length }}</strong><span>{{ 'rendez-vous à venir' | tr: 'upcoming appointments' }}</span></div>
+          <div><strong>{{ clients().length }}</strong><span>{{ 'clients' | tr: 'clients' }}</span></div>
         </div>
       </div>
     </section>
@@ -23,14 +24,13 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
     <div class="conteneur grille">
       <div class="colonne">
         <section class="carte">
-          <h2>Prochains rendez-vous</h2>
+          <h2>{{ 'Prochains rendez-vous' | tr: 'Upcoming appointments' }}</h2>
           <p class="aide">
-            Les séances réservées par vos clients via Calendly apparaissent ici automatiquement.
-            Vos disponibilités se règlent dans Calendly.
+            {{ 'Les séances réservées par vos clients via Calendly apparaissent ici automatiquement. Vos disponibilités se règlent dans Calendly.' | tr: 'Sessions booked by your clients through Calendly appear here automatically. You manage your availability in Calendly.' }}
           </p>
           @if (configure() === false) {
             <p class="vide">
-              Calendly n'est pas encore relié au serveur : définissez la variable <code>CALENDLY_TOKEN</code>.
+              {{ "Calendly n'est pas encore relié au serveur : définissez la variable" | tr: 'Calendly is not yet connected to the server: set the variable' }} <code>CALENDLY_TOKEN</code>.
             </p>
           } @else {
             @for (r of rdv(); track r.id) {
@@ -38,14 +38,14 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
                 <span class="avatar">{{ nomClient(r).charAt(0) }}</span>
                 <div class="corps">
                   <strong>{{ nomClient(r) }}</strong>
-                  <small>{{ creneau(r.debut, r.fin) }}</small>
+                  <small>{{ creneau(r.debut, r.fin, i18n.locale()) }}</small>
                 </div>
                 @if (r.lien) {
-                  <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">Rejoindre</a>
+                  <a class="btn petit" [href]="r.lien" target="_blank" rel="noopener">{{ 'Rejoindre' | tr: 'Join' }}</a>
                 }
               </article>
             } @empty {
-              <p class="vide">{{ erreurAgenda() ? "Les rendez-vous n'ont pas pu être chargés." : 'Aucun rendez-vous à venir.' }}</p>
+              <p class="vide">{{ erreurAgenda() ? ("Les rendez-vous n'ont pas pu être chargés." | tr: 'Appointments could not be loaded.') : ('Aucun rendez-vous à venir.' | tr: 'No upcoming appointments.') }}</p>
             }
           }
         </section>
@@ -53,21 +53,21 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
 
       <div class="colonne">
         <section class="carte">
-          <h2>Mes clients</h2>
+          <h2>{{ 'Mes clients' | tr: 'My clients' }}</h2>
           <form class="ajout" (ngSubmit)="ajouterClient()">
-            <label for="nom">Nouveau client</label>
-            <input id="nom" name="nom" [(ngModel)]="nouveauNom" placeholder="Prénom Nom" required />
-            <label for="solde">Séances achetées</label>
+            <label for="nom">{{ 'Nouveau client' | tr: 'New client' }}</label>
+            <input id="nom" name="nom" [(ngModel)]="nouveauNom" [placeholder]="'Prénom Nom' | tr: 'First name Last name'" required />
+            <label for="solde">{{ 'Séances achetées' | tr: 'Sessions purchased' }}</label>
             <input id="solde" name="solde" type="number" min="1" max="200" [(ngModel)]="nouveauSolde" required />
-            <button class="btn petit" type="submit" [disabled]="!nouveauNom.trim() || nouveauSolde < 1">Créer l'espace</button>
+            <button class="btn petit" type="submit" [disabled]="!nouveauNom.trim() || nouveauSolde < 1">{{ "Créer l'espace" | tr: 'Create client area' }}</button>
           </form>
 
           @if (cree(); as c) {
             <div class="acces" role="status">
-              <strong>Espace créé pour {{ c.nom }}</strong>
-              <span>Identifiant : <code>{{ c.identifiant }}</code></span>
-              <span>Code d'accès : <code>{{ c.code }}</code></span>
-              <small>À transmettre au client.</small>
+              <strong>{{ 'Espace créé pour' | tr: 'Client area created for' }} {{ c.nom }}</strong>
+              <span>{{ 'Identifiant :' | tr: 'Username:' }} <code>{{ c.identifiant }}</code></span>
+              <span>{{ "Code d'accès :" | tr: 'Access code:' }} <code>{{ c.code }}</code></span>
+              <small>{{ 'À transmettre au client.' | tr: 'To be passed on to the client.' }}</small>
             </div>
           }
 
@@ -78,15 +78,15 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
                 <strong>{{ c.nom }}</strong>
                 <small>{{ c.identifiant }} · <code>{{ c.code }}</code></small>
               </div>
-              <span class="solde"><strong>{{ c.solde }}</strong> séance(s) · {{ data.documentsDe(c.id).length }} doc(s)</span>
+              <span class="solde"><strong>{{ c.solde }}</strong> {{ 'séance(s)' | tr: 'session(s)' }} · {{ data.documentsDe(c.id).length }} {{ 'doc(s)' | tr: 'doc(s)' }}</span>
               <div class="outils">
-                <a class="btn petit" [routerLink]="['/espace-pro/client', c.id]">Ouvrir la fiche</a>
-                <button type="button" class="lien" (click)="regenerer(c)">Nouveau code</button>
-                <button type="button" class="lien danger" (click)="supprimer(c)">Supprimer</button>
+                <a class="btn petit" [routerLink]="['/espace-pro/client', c.id]">{{ 'Ouvrir la fiche' | tr: 'Open client file' }}</a>
+                <button type="button" class="lien" (click)="regenerer(c)">{{ 'Nouveau code' | tr: 'New code' }}</button>
+                <button type="button" class="lien danger" (click)="supprimer(c)">{{ 'Supprimer' | tr: 'Delete' }}</button>
               </div>
             </article>
           } @empty {
-            <p class="vide">Aucun client pour le moment.</p>
+            <p class="vide">{{ 'Aucun client pour le moment.' | tr: 'No clients yet.' }}</p>
           }
         </section>
       </div>
@@ -192,6 +192,7 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
 })
 export class EspacePro {
   protected readonly data = inject(DataService);
+  protected readonly i18n = inject(I18n);
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
 
   protected readonly clients = computed(() => this.data.utilisateurs().filter((u) => u.role === 'client'));
@@ -220,13 +221,13 @@ export class EspacePro {
   }
 
   protected regenerer(c: Utilisateur): void {
-    if (!confirm(`Générer un nouveau code pour ${c.nom} ? L'ancien ne fonctionnera plus.`)) return;
+    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${c.nom} ? L'ancien ne fonctionnera plus.`, `Generate a new code for ${c.nom}? The old one will stop working.`))) return;
     this.data.regenererCode(c.id);
     this.cree.set(null);
   }
 
   protected supprimer(c: Utilisateur): void {
-    if (!confirm(`Supprimer ${c.nom} ? Son espace, ses documents et ses demandes seront effacés.`)) return;
+    if (!confirm(this.i18n.t(`Supprimer ${c.nom} ? Son espace, ses documents et ses demandes seront effacés.`, `Delete ${c.nom}? Their client area, documents and requests will be erased.`))) return;
     this.data.supprimerClient(c.id);
     this.cree.set(null);
   }

@@ -2,43 +2,44 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
+import { TrPipe } from '../../core/i18n';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TrPipe],
   template: `
     <div class="page">
       <aside class="panneau" aria-hidden="true">
         <span class="logo"></span>
-        <blockquote>« Se retrouver, c'est déjà commencer à avancer. »</blockquote>
-        <p>Votre espace personnel : vos documents, vos séances, en toute confidentialité.</p>
+        <blockquote>{{ "« Se retrouver, c'est déjà commencer à avancer. »" | tr: '“Finding yourself is already the first step forward.”' }}</blockquote>
+        <p>{{ 'Votre espace personnel : vos documents, vos séances, en toute confidentialité.' | tr: 'Your personal space: your documents and your sessions, in complete confidence.' }}</p>
       </aside>
 
       <section class="formulaire">
         <form (ngSubmit)="valider()">
-          <span class="sur-titre">Espace membre</span>
-          <h1>Bon retour</h1>
-          <p class="intro">Utilisez l'identifiant et le code d'accès remis par Youcef.</p>
+          <span class="sur-titre">{{ 'Espace membre' | tr: 'Member area' }}</span>
+          <h1>{{ 'Bon retour' | tr: 'Welcome back' }}</h1>
+          <p class="intro">{{ "Utilisez l'identifiant et le code d'accès remis par Youcef." | tr: 'Use the username and access code provided by Youcef.' }}</p>
 
-          <label for="id">Identifiant</label>
+          <label for="id">{{ 'Identifiant' | tr: 'Username' }}</label>
           <input id="id" name="id" [(ngModel)]="identifiant" autocomplete="username" required />
 
-          <label for="code">Code d'accès</label>
+          <label for="code">{{ "Code d'accès" | tr: 'Access code' }}</label>
           <input id="code" name="code" type="password" [(ngModel)]="code" autocomplete="current-password" required />
 
           @if (erreur()) {
-            <p class="erreur" role="alert">Identifiant ou code incorrect.</p>
+            <p class="erreur" role="alert">{{ 'Identifiant ou code incorrect.' | tr: 'Incorrect username or access code.' }}</p>
           }
 
-          <button class="btn large" type="submit">Se connecter</button>
+          <button class="btn large" type="submit">{{ 'Se connecter' | tr: 'Sign in' }}</button>
 
           <div class="demo">
-            <span>Comptes de démonstration</span>
-            <button type="button" (click)="remplir('marie-dupont', 'K7M2-QX9P')">Espace client</button>
-            <button type="button" (click)="remplir('youcef', 'pro123')">Espace Youcef</button>
+            <span>{{ 'Comptes de démonstration' | tr: 'Demo accounts' }}</span>
+            <button type="button" (click)="remplir('marie-dupont', 'K7M2-QX9P')">{{ 'Espace client' | tr: 'Client area' }}</button>
+            <button type="button" (click)="remplir('youcef', 'pro123')">{{ 'Espace Youcef' | tr: 'Youcef's area' }}</button>
           </div>
 
-          <a routerLink="/" class="retour">← Retour à l'accueil</a>
+          <a routerLink="/" class="retour">{{ "← Retour à l'accueil" | tr: '← Back to home' }}</a>
         </form>
       </section>
     </div>

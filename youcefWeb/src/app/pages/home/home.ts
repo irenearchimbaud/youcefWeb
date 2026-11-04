@@ -1,23 +1,23 @@
-import { Component } from '@angular/core';
+import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { I18n, TrPipe } from '../../core/i18n';
 
 @Component({
   selector: 'app-home',
-  imports: [RouterLink],
+  imports: [RouterLink, TrPipe],
   template: `
     <!-- HERO -->
     <section class="hero">
       <div class="conteneur hero-grille">
         <div class="hero-texte">
-          <span class="sur-titre">Coaching en développement personnel · 100 % visio</span>
-          <h1>Retrouvez votre équilibre. <em>Reprenez votre place.</em></h1>
+          <span class="sur-titre">{{ 'Coaching en développement personnel · 100 % visio' | tr: 'Personal development coaching · 100% online' }}</span>
+          <h1>{{ 'Retrouvez votre équilibre.' | tr: 'Find your balance.' }} <em>{{ 'Reprenez votre place.' | tr: 'Take your place back.' }}</em></h1>
           <p class="chapeau">
-            Je vous accompagne à mieux vous comprendre pour faire des choix alignés avec votre
-            identité profonde, vos valeurs et vos aspirations.
+            {{ 'Je vous accompagne à mieux vous comprendre pour faire des choix alignés avec votre identité profonde, vos valeurs et vos aspirations.' | tr: 'I help you understand yourself better so you can make choices aligned with your deepest identity, your values and your aspirations.' }}
           </p>
           <div class="actions">
-            <a routerLink="/devis" class="btn">Demander un devis</a>
-            <a routerLink="/" fragment="accompagnements" class="btn secondaire">Découvrir les accompagnements</a>
+            <a routerLink="/devis" class="btn">{{ 'Demander un devis' | tr: 'Request a quote' }}</a>
+            <a routerLink="/" fragment="accompagnements" class="btn secondaire">{{ 'Découvrir les accompagnements' | tr: 'Discover the programmes' }}</a>
           </div>
         </div>
         <div class="hero-visuel" aria-hidden="true">
@@ -30,10 +30,10 @@ import { RouterLink } from '@angular/router';
     <!-- BANDEAU DE CONFIANCE -->
     <section class="confiance">
       <div class="conteneur confiance-grille">
-        @for (c of confiance; track c.titre) {
+        @for (c of confiance; track $index) {
           <div>
-            <strong>{{ c.titre }}</strong>
-            <span>{{ c.texte }}</span>
+            <strong>{{ c.titre() }}</strong>
+            <span>{{ c.texte() }}</span>
           </div>
         }
       </div>
@@ -43,19 +43,18 @@ import { RouterLink } from '@angular/router';
     <section id="approche" class="bloc">
       <div class="conteneur">
         <div class="entete">
-          <span class="sur-titre">Mon approche</span>
-          <h2>Un accompagnement sur mesure, <em>sans filtre</em></h2>
+          <span class="sur-titre">{{ 'Mon approche' | tr: 'My approach' }}</span>
+          <h2>{{ 'Un accompagnement sur mesure,' | tr: 'Tailor-made support,' }} <em>{{ 'sans filtre' | tr: 'no filter' }}</em></h2>
           <p>
-            Surmonter vos blocages profonds, retrouver un équilibre et vous réaliser pleinement, sur le
-            plan personnel comme professionnel. Voici ce que nous construisons ensemble.
+            {{ 'Surmonter vos blocages profonds, retrouver un équilibre et vous réaliser pleinement, sur le plan personnel comme professionnel. Voici ce que nous construisons ensemble.' | tr: 'Overcome deep-seated blocks, regain your balance and fulfil your potential, both personally and professionally. Here is what we build together.' }}
           </p>
         </div>
         <div class="roles">
-          @for (r of roles; track r.titre; let i = $index) {
+          @for (r of roles; track $index; let i = $index) {
             <article class="carte role">
               <span class="numero">0{{ i + 1 }}</span>
-              <h3>{{ r.titre }}</h3>
-              <p>{{ r.texte }}</p>
+              <h3>{{ r.titre() }}</h3>
+              <p>{{ r.texte() }}</p>
             </article>
           }
         </div>
@@ -66,18 +65,14 @@ import { RouterLink } from '@angular/router';
     <section class="citation">
       <div class="conteneur citation-grille">
         <blockquote>
-          « Vous n'avez pas besoin d'aller mal pour vouloir aller mieux. Il suffit d'avoir envie de vous
-          retrouver. »
+          {{ '« Vous n\\'avez pas besoin d\\'aller mal pour vouloir aller mieux. Il suffit d\\'avoir envie de vous retrouver. »' | tr: '“You don\\'t have to be struggling to want to feel better. All it takes is the desire to find yourself again.”' }}
         </blockquote>
         <div>
-          <span class="sur-titre">Pour qui ?</span>
+          <span class="sur-titre">{{ 'Pour qui ?' | tr: 'Who is it for?' }}</span>
           <p>
-            Pour toute personne en quête de sens, quel que soit son parcours ou sa situation. Beaucoup de
-            celles et ceux que j'accompagne doutent de leur valeur et ont du mal à s'attribuer le mérite de
-            ce qu'ils accomplissent : une réussite est mise sur le compte de la chance, un échec sur le
-            compte de leur personne.
+            {{ 'Pour toute personne en quête de sens, quel que soit son parcours ou sa situation. Beaucoup de celles et ceux que j\\'accompagne doutent de leur valeur et ont du mal à s\\'attribuer le mérite de ce qu\\'ils accomplissent : une réussite est mise sur le compte de la chance, un échec sur le compte de leur personne.' | tr: 'For anyone searching for meaning, whatever their background or situation. Many of the people I work with doubt their worth and struggle to take credit for what they achieve: a success is put down to luck, a failure to who they are.' }}
           </p>
-          <p>Ensemble, nous remettons les choses à leur juste place.</p>
+          <p>{{ 'Ensemble, nous remettons les choses à leur juste place.' | tr: 'Together, we put things back in their rightful place.' }}</p>
         </div>
       </div>
     </section>
@@ -86,26 +81,26 @@ import { RouterLink } from '@angular/router';
     <section id="accompagnements" class="bloc">
       <div class="conteneur">
         <div class="entete centre">
-          <span class="sur-titre">Les accompagnements</span>
-          <h2>Trois formules, <em>un même engagement</em></h2>
-          <p>Suivi de trois mois minimum, séances en visio uniquement. Tarif communiqué sur demande.</p>
+          <span class="sur-titre">{{ 'Les accompagnements' | tr: 'The programmes' }}</span>
+          <h2>{{ 'Trois formules,' | tr: 'Three programmes,' }} <em>{{ 'un même engagement' | tr: 'one shared commitment' }}</em></h2>
+          <p>{{ 'Suivi de trois mois minimum, séances en visio uniquement. Tarif communiqué sur demande.' | tr: 'A minimum of three months of support, online sessions only. Pricing available on request.' }}</p>
         </div>
         <div class="offres">
-          @for (o of offres; track o.titre) {
+          @for (o of offres; track o.cle) {
             <article class="offre" [class.vedette]="o.vedette">
               @if (o.vedette) {
-                <span class="ruban">Le plus complet</span>
+                <span class="ruban">{{ 'Le plus complet' | tr: 'Most comprehensive' }}</span>
               }
-              <span class="duree">{{ o.duree }}</span>
-              <h3>{{ o.titre }}</h3>
-              <p class="resume">{{ o.resume }}</p>
+              <span class="duree">{{ o.duree() }}</span>
+              <h3>{{ o.titre() }}</h3>
+              <p class="resume">{{ o.resume() }}</p>
               <ul>
-                @for (p of o.points; track p) {
+                @for (p of o.points(); track $index) {
                   <li>{{ p }}</li>
                 }
               </ul>
-              <a routerLink="/devis" [queryParams]="{ formule: o.titre }" class="btn" [class.secondaire]="!o.vedette" [class.clair]="o.vedette">
-                Demander un devis
+              <a routerLink="/devis" [queryParams]="{ formule: o.cle }" class="btn" [class.secondaire]="!o.vedette" [class.clair]="o.vedette">
+                {{ 'Demander un devis' | tr: 'Request a quote' }}
               </a>
             </article>
           }
@@ -117,15 +112,15 @@ import { RouterLink } from '@angular/router';
     <section id="parcours" class="bloc parcours">
       <div class="conteneur">
         <div class="entete centre">
-          <span class="sur-titre">Le parcours</span>
-          <h2>Simple, <em>du premier échange</em> au suivi</h2>
+          <span class="sur-titre">{{ 'Le parcours' | tr: 'The journey' }}</span>
+          <h2>{{ 'Simple,' | tr: 'Simple,' }} <em>{{ 'du premier échange' | tr: 'from the first conversation' }}</em> {{ 'au suivi' | tr: 'to ongoing support' }}</h2>
         </div>
         <ol class="etapes">
-          @for (e of etapes; track e.titre; let i = $index) {
+          @for (e of etapes; track $index; let i = $index) {
             <li>
               <span class="pastille">{{ i + 1 }}</span>
-              <h3>{{ e.titre }}</h3>
-              <p>{{ e.texte }}</p>
+              <h3>{{ e.titre() }}</h3>
+              <p>{{ e.texte() }}</p>
             </li>
           }
         </ol>
@@ -135,9 +130,9 @@ import { RouterLink } from '@angular/router';
     <!-- APPEL FINAL -->
     <section class="final">
       <div class="conteneur">
-        <h2>Prêt à vous retrouver ?</h2>
-        <p>Le premier pas, c'est simplement de me dire ce qui vous amène.</p>
-        <a routerLink="/login" class="btn clair">Accéder à mon espace</a>
+        <h2>{{ 'Prêt à vous retrouver ?' | tr: 'Ready to find yourself again?' }}</h2>
+        <p>{{ 'Le premier pas, c\\'est simplement de me dire ce qui vous amène.' | tr: 'The first step is simply to tell me what brings you here.' }}</p>
+        <a routerLink="/login" class="btn clair">{{ 'Accéder à mon espace' | tr: 'Access my account' }}</a>
       </div>
     </section>
   `,
@@ -388,72 +383,81 @@ import { RouterLink } from '@angular/router';
   `,
 })
 export class Home {
+  private readonly i18n = inject(I18n);
+
+  private tx(fr: string, en: string) {
+    return computed(() => this.i18n.t(fr, en));
+  }
+
   protected readonly confiance = [
-    { titre: '100 % visio', texte: 'Où que vous soyez' },
-    { titre: '3 mois minimum', texte: 'Un vrai suivi dans la durée' },
-    { titre: '1 séance / semaine', texte: 'Un rythme régulier' },
-    { titre: 'Confidentiel', texte: 'Un espace personnel sécurisé' },
+    { titre: this.tx('100 % visio', '100% online'), texte: this.tx('Où que vous soyez', 'Wherever you are') },
+    { titre: this.tx('3 mois minimum', '3 months minimum'), texte: this.tx('Un vrai suivi dans la durée', 'Genuine long-term support') },
+    { titre: this.tx('1 séance / semaine', '1 session / week'), texte: this.tx('Un rythme régulier', 'A steady rhythm') },
+    { titre: this.tx('Confidentiel', 'Confidential'), texte: this.tx('Un espace personnel sécurisé', 'A secure personal space') },
   ];
 
   protected readonly roles = [
     {
-      titre: 'Faire taire le critique intérieur',
-      texte: 'Ce petit juge qui vous maintient au sol perd peu à peu de son pouvoir.',
+      titre: this.tx('Faire taire le critique intérieur', 'Silence your inner critic'),
+      texte: this.tx('Ce petit juge qui vous maintient au sol perd peu à peu de son pouvoir.', 'That little judge keeping you down gradually loses its power.'),
     },
     {
-      titre: 'Reconstruire votre estime de vous',
-      texte: 'Une estime solide et inébranlable, qui ne dépend plus du regard des autres.',
+      titre: this.tx('Reconstruire votre estime de vous', 'Rebuild your self-esteem'),
+      texte: this.tx('Une estime solide et inébranlable, qui ne dépend plus du regard des autres.', 'Solid, unshakeable self-esteem that no longer depends on how others see you.'),
     },
     {
-      titre: 'Vous libérer de la pression sociale',
-      texte: 'Déposer le poids des attentes pour choisir ce qui compte vraiment pour vous.',
+      titre: this.tx('Vous libérer de la pression sociale', 'Free yourself from social pressure'),
+      texte: this.tx('Déposer le poids des attentes pour choisir ce qui compte vraiment pour vous.', 'Put down the weight of expectations and choose what truly matters to you.'),
     },
     {
-      titre: 'Vous reconnecter à qui vous êtes',
-      texte: 'Retrouver votre identité profonde, vos valeurs et vos aspirations, sans filtre.',
+      titre: this.tx('Vous reconnecter à qui vous êtes', 'Reconnect with who you are'),
+      texte: this.tx('Retrouver votre identité profonde, vos valeurs et vos aspirations, sans filtre.', 'Rediscover your deepest identity, your values and your aspirations, unfiltered.'),
     },
   ];
 
   protected readonly offres = [
     {
-      duree: '3 mois',
-      titre: 'Accompagnement ciblé',
-      resume: 'Pour traiter deux problématiques précises.',
-      points: [
-        '10 à 12 séances en visio',
-        'Deux problématiques travaillées',
-        'Souvent, l\'essentiel se joue en 4 à 5 séances',
-      ],
+      cle: 'Accompagnement ciblé',
+      duree: this.tx('3 mois', '3 months'),
+      titre: this.tx('Accompagnement ciblé', 'Targeted programme'),
+      resume: this.tx('Pour traiter deux problématiques précises.', 'To work through two specific issues.'),
+      points: computed(() => [
+        this.i18n.t('10 à 12 séances en visio', '10 to 12 online sessions'),
+        this.i18n.t('Deux problématiques travaillées', 'Two issues worked on'),
+        this.i18n.t('Souvent, l\'essentiel se joue en 4 à 5 séances', 'Often, the essential work happens in 4 to 5 sessions'),
+      ]),
       vedette: false,
     },
     {
-      duree: '6 mois',
-      titre: 'Accompagnement approfondi',
-      resume: 'Pour avancer en profondeur sur plusieurs sujets.',
-      points: [
-        'Un rendez-vous par semaine en visio',
-        'Plusieurs problématiques travaillées',
-        'Un suivi sur la durée, documents à disposition',
-      ],
+      cle: 'Accompagnement approfondi',
+      duree: this.tx('6 mois', '6 months'),
+      titre: this.tx('Accompagnement approfondi', 'In-depth programme'),
+      resume: this.tx('Pour avancer en profondeur sur plusieurs sujets.', 'To make deep progress on several topics.'),
+      points: computed(() => [
+        this.i18n.t('Un rendez-vous par semaine en visio', 'One online appointment per week'),
+        this.i18n.t('Plusieurs problématiques travaillées', 'Several issues worked on'),
+        this.i18n.t('Un suivi sur la durée, documents à disposition', 'Long-term follow-up, with documents provided'),
+      ]),
       vedette: true,
     },
     {
-      duree: '1 semaine',
-      titre: 'Bootcamp à l\'étranger',
-      resume: 'Une immersion pour un grand reset.',
-      points: [
-        'Une semaine intensive à l\'étranger',
-        'Un cadre dépaysant, loin du quotidien',
-        'Un accompagnement concentré',
-      ],
+      cle: 'Bootcamp à l\'étranger',
+      duree: this.tx('1 semaine', '1 week'),
+      titre: this.tx('Bootcamp à l\'étranger', 'Bootcamp abroad'),
+      resume: this.tx('Une immersion pour un grand reset.', 'An immersion for a complete reset.'),
+      points: computed(() => [
+        this.i18n.t('Une semaine intensive à l\'étranger', 'An intensive week abroad'),
+        this.i18n.t('Un cadre dépaysant, loin du quotidien', 'A change of scenery, away from daily life'),
+        this.i18n.t('Un accompagnement concentré', 'Focused, concentrated support'),
+      ]),
       vedette: false,
     },
   ];
 
   protected readonly etapes = [
-    { titre: 'Je demande un devis', texte: 'J\'indique la formule et ce qui m\'amène.' },
-    { titre: 'Youcef me répond', texte: 'Il étudie ma demande et me propose un créneau en visio.' },
-    { titre: 'Je reçois mon accès', texte: 'Youcef crée mon espace personnel et sécurisé.' },
-    { titre: 'Je suis accompagné', texte: 'Séances chaque semaine, documents et comptes rendus dans mon espace.' },
+    { titre: this.tx('Je demande un devis', 'I request a quote'), texte: this.tx('J\'indique la formule et ce qui m\'amène.', 'I choose a programme and tell you what brings me here.') },
+    { titre: this.tx('Youcef me répond', 'Youcef replies'), texte: this.tx('Il étudie ma demande et me propose un créneau en visio.', 'He reviews my request and offers me a video session slot.') },
+    { titre: this.tx('Je reçois mon accès', 'I receive my access'), texte: this.tx('Youcef crée mon espace personnel et sécurisé.', 'Youcef creates my personal, secure space.') },
+    { titre: this.tx('Je suis accompagné', 'I am supported'), texte: this.tx('Séances chaque semaine, documents et comptes rendus dans mon espace.', 'Weekly sessions, with documents and session notes in my space.') },
   ];
 }

@@ -1,47 +1,50 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
+import { I18n, TrPipe } from '../../core/i18n';
 
 @Component({
   selector: 'app-devis',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TrPipe],
   template: `
     <div class="page">
       <section class="formulaire">
         @if (envoye()) {
           <div class="succes">
-            <span class="sur-titre">Demande envoyée</span>
-            <h1>Merci !</h1>
+            <span class="sur-titre">{{ 'Demande envoyée' | tr: 'Request sent' }}</span>
+            <h1>{{ 'Merci !' | tr: 'Thank you!' }}</h1>
             <p class="intro">
-              Youcef a bien reçu votre demande. Il vous répond par e-mail dans les meilleurs délais, puis crée votre
-              espace personnel.
+              {{
+                'Youcef a bien reçu votre demande. Il vous répond par e-mail dans les meilleurs délais, puis crée votre espace personnel.'
+                  | tr: 'Youcef has received your request. He will reply by email as soon as possible and then set up your personal space.'
+              }}
             </p>
-            <a routerLink="/" class="btn">Retour à l'accueil</a>
+            <a routerLink="/" class="btn">{{ "Retour à l'accueil" | tr: 'Back to home' }}</a>
           </div>
         } @else {
           <form (ngSubmit)="envoyer()">
-            <span class="sur-titre">Demande de devis</span>
-            <h1>Parlons de votre projet</h1>
-            <p class="intro">Quelques informations suffisent : Youcef vous répond personnellement par e-mail.</p>
+            <span class="sur-titre">{{ 'Demande de devis' | tr: 'Quote request' }}</span>
+            <h1>{{ 'Parlons de votre projet' | tr: 'Let’s talk about your project' }}</h1>
+            <p class="intro">{{ 'Quelques informations suffisent : Youcef vous répond personnellement par e-mail.' | tr: 'A few details are enough: Youcef will reply to you personally by email.' }}</p>
 
-            <label for="nom">Nom et prénom</label>
+            <label for="nom">{{ 'Nom et prénom' | tr: 'Full name' }}</label>
             <input id="nom" name="nom" [(ngModel)]="nom" autocomplete="name" maxlength="100" required />
 
-            <label for="email">E-mail</label>
+            <label for="email">{{ 'E-mail' | tr: 'Email' }}</label>
             <input id="email" name="email" type="email" [(ngModel)]="email" autocomplete="email" maxlength="150" required />
 
-            <label for="tel">Téléphone (facultatif)</label>
+            <label for="tel">{{ 'Téléphone (facultatif)' | tr: 'Phone (optional)' }}</label>
             <input id="tel" name="tel" type="tel" [(ngModel)]="telephone" autocomplete="tel" maxlength="30" />
 
-            <label for="formule">Formule souhaitée</label>
+            <label for="formule">{{ 'Formule souhaitée' | tr: 'Preferred package' }}</label>
             <select id="formule" name="formule" [(ngModel)]="formule">
-              <option value="">Je ne sais pas encore</option>
-              @for (f of formules; track f) {
-                <option [value]="f">{{ f }}</option>
+              <option value="">{{ 'Je ne sais pas encore' | tr: 'I’m not sure yet' }}</option>
+              @for (f of formules; track f.fr) {
+                <option [value]="f.fr">{{ f.fr | tr: f.en }}</option>
               }
             </select>
 
-            <label for="message">Ce qui vous amène</label>
+            <label for="message">{{ 'Ce qui vous amène' | tr: 'What brings you here' }}</label>
             <textarea id="message" name="message" rows="5" [(ngModel)]="message" maxlength="3000" required></textarea>
 
             <input class="piege" name="siteWeb" [(ngModel)]="siteWeb" tabindex="-1" autocomplete="off" aria-hidden="true" />
@@ -51,9 +54,9 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
             }
 
             <button class="btn large" type="submit" [disabled]="enCours()">
-              {{ enCours() ? 'Envoi…' : 'Envoyer ma demande' }}
+              {{ enCours() ? ('Envoi…' | tr: 'Sending…') : ('Envoyer ma demande' | tr: 'Send my request') }}
             </button>
-            <a routerLink="/" class="retour">← Retour à l'accueil</a>
+            <a routerLink="/" class="retour">{{ "← Retour à l'accueil" | tr: '← Back to home' }}</a>
           </form>
         }
       </section>
@@ -78,7 +81,13 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
   `,
 })
 export class Devis {
-  protected readonly formules = ['Accompagnement ciblé', 'Accompagnement approfondi', "Bootcamp à l'étranger"];
+  private readonly i18n = inject(I18n);
+
+  protected readonly formules = [
+    { fr: 'Accompagnement ciblé', en: 'Focused coaching' },
+    { fr: 'Accompagnement approfondi', en: 'In-depth coaching' },
+    { fr: "Bootcamp à l'étranger", en: 'Bootcamp abroad' },
+  ];
 
   protected nom = '';
   protected email = '';
@@ -93,7 +102,12 @@ export class Devis {
 
   protected async envoyer(): Promise<void> {
     if (!this.nom.trim() || !this.email.trim() || !this.message.trim()) {
-      this.erreur.set('Merci de renseigner votre nom, votre e-mail et votre message.');
+      this.erreur.set(
+        this.i18n.t(
+          'Merci de renseigner votre nom, votre e-mail et votre message.',
+          'Please fill in your name, email and message.',
+        ),
+      );
       return;
     }
     this.erreur.set('');
@@ -112,9 +126,14 @@ export class Devis {
         }),
       });
       if (r.ok) this.envoye.set(true);
-      else this.erreur.set((await r.json().catch(() => null))?.erreur ?? "L'envoi a échoué. Merci de réessayer.");
+      else this.erreur.set((await r.json().catch(() => null))?.erreur ?? this.i18n.t("L'envoi a échoué. Merci de réessayer.", 'Sending failed. Please try again.'));
     } catch {
-      this.erreur.set("L'envoi a échoué. Vérifiez votre connexion et réessayez.");
+      this.erreur.set(
+        this.i18n.t(
+          "L'envoi a échoué. Vérifiez votre connexion et réessayez.",
+          'Sending failed. Please check your connection and try again.',
+        ),
+      );
     } finally {
       this.enCours.set(false);
     }

@@ -1,99 +1,100 @@
 import { Component, computed, inject, input, signal } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
+import { I18n, TrPipe } from '../../core/i18n';
 import { DataService } from '../../core/data.service';
 import { Document, TAILLE_MAX_DOCUMENT, TYPES_DOCUMENT, estVisualisable, formaterTaille } from '../../core/models';
 
 @Component({
   selector: 'app-fiche-client',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, TrPipe],
   template: `
     @if (client(); as c) {
       <section class="bandeau">
         <div class="conteneur">
-          <a class="retour" routerLink="/espace-pro">← Mes clients</a>
-          <span class="sur-titre">Fiche client</span>
+          <a class="retour" routerLink="/espace-pro">{{ '← Mes clients' | tr: '← My clients' }}</a>
+          <span class="sur-titre">{{ 'Fiche client' | tr: 'Client file' }}</span>
           <h1>{{ c.nom }}</h1>
-          <p class="acces">Identifiant : <code>{{ c.identifiant }}</code> · Code d'accès : <code>{{ c.code }}</code></p>
+          <p class="acces">{{ 'Identifiant :' | tr: 'Username:' }} <code>{{ c.identifiant }}</code> · {{ "Code d'accès :" | tr: 'Access code:' }} <code>{{ c.code }}</code></p>
         </div>
       </section>
 
       <div class="conteneur grille">
         <section class="carte">
-          <h2>Séances</h2>
-          <p class="solde"><strong>{{ c.solde }}</strong> séance(s) restante(s)</p>
+          <h2>{{ 'Séances' | tr: 'Sessions' }}</h2>
+          <p class="solde"><strong>{{ c.solde }}</strong> {{ 'séance(s) restante(s)' | tr: 'session(s) remaining' }}</p>
 
           @if (etape() === 'repos') {
-            <button type="button" class="btn secondaire petit" (click)="commencerModif(c.solde)">Modifier le nombre de séances</button>
+            <button type="button" class="btn secondaire petit" (click)="commencerModif(c.solde)">{{ 'Modifier le nombre de séances' | tr: 'Change the number of sessions' }}</button>
           } @else if (etape() === 'saisie') {
             <form (ngSubmit)="demanderConfirmation(c.solde)">
-              <label for="nb">Nouveau nombre de séances</label>
+              <label for="nb">{{ 'Nouveau nombre de séances' | tr: 'New number of sessions' }}</label>
               <input id="nb" name="nb" type="number" min="0" max="500" step="1" [(ngModel)]="nouveauSolde" required />
               <div class="boutons">
-                <button class="btn petit" type="submit" [disabled]="!valide() || nouveauSolde === c.solde">Continuer</button>
-                <button class="btn secondaire petit" type="button" (click)="annuler()">Annuler</button>
+                <button class="btn petit" type="submit" [disabled]="!valide() || nouveauSolde === c.solde">{{ 'Continuer' | tr: 'Continue' }}</button>
+                <button class="btn secondaire petit" type="button" (click)="annuler()">{{ 'Annuler' | tr: 'Cancel' }}</button>
               </div>
             </form>
           } @else {
             <div class="confirmation" role="alertdialog" aria-labelledby="titre-confirm">
-              <strong id="titre-confirm">Confirmer la modification ?</strong>
+              <strong id="titre-confirm">{{ 'Confirmer la modification ?' | tr: 'Confirm the change?' }}</strong>
               <p>
-                Le solde de {{ c.nom }} passera de <strong>{{ c.solde }}</strong> à <strong>{{ nouveauSolde }}</strong> séance(s)
+                {{ 'Le solde de' | tr: 'The balance of sessions for' }} {{ c.nom }} {{ 'passera de' | tr: 'will change from' }} <strong>{{ c.solde }}</strong> {{ 'à' | tr: 'to' }} <strong>{{ nouveauSolde }}</strong> {{ 'séance(s)' | tr: 'session(s)' }}
                 ({{ nouveauSolde - c.solde > 0 ? '+' : '' }}{{ nouveauSolde - c.solde }}).
               </p>
               <div class="boutons">
-                <button class="btn petit" type="button" (click)="confirmer(c.id)">Oui, modifier</button>
-                <button class="btn secondaire petit" type="button" (click)="annuler()">Non, annuler</button>
+                <button class="btn petit" type="button" (click)="confirmer(c.id)">{{ 'Oui, modifier' | tr: 'Yes, change it' }}</button>
+                <button class="btn secondaire petit" type="button" (click)="annuler()">{{ 'Non, annuler' | tr: 'No, cancel' }}</button>
               </div>
             </div>
           }
           @if (message()) {
-            <p class="succes" role="status">{{ message() }}</p>
+            <p class="succes" role="status">{{ 'Nombre de séances mis à jour.' | tr: 'Number of sessions updated.' }}</p>
           }
 
           <div class="outils">
-            <button type="button" class="lien" (click)="regenerer(c.id, c.nom)">Nouveau code</button>
-            <button type="button" class="lien danger" (click)="supprimerClient(c.id, c.nom)">Supprimer le client</button>
+            <button type="button" class="lien" (click)="regenerer(c.id, c.nom)">{{ 'Nouveau code' | tr: 'New code' }}</button>
+            <button type="button" class="lien danger" (click)="supprimerClient(c.id, c.nom)">{{ 'Supprimer le client' | tr: 'Delete client' }}</button>
           </div>
         </section>
 
         <section class="carte">
-          <h2>Documents</h2>
+          <h2>{{ 'Documents' | tr: 'Documents' }}</h2>
           <form class="ajout" (ngSubmit)="deposer(c.id)">
-            <label for="titre">Titre du document</label>
-            <input id="titre" name="titre" [(ngModel)]="titre" placeholder="Ex. Compte rendu – séance 3" />
-            <label for="fichier">Fichier</label>
+            <label for="titre">{{ 'Titre du document' | tr: 'Document title' }}</label>
+            <input id="titre" name="titre" [(ngModel)]="titre" [placeholder]="'Ex. Compte rendu – séance 3' | tr: 'E.g. Report – session 3'" />
+            <label for="fichier">{{ 'Fichier' | tr: 'File' }}</label>
             <input id="fichier" name="fichier" type="file" [accept]="types" (change)="choisir($event)" />
-            <small class="aide">PDF, images, Word ou texte · 10 Mo maximum.</small>
+            <small class="aide">{{ 'PDF, images, Word ou texte · 10 Mo maximum.' | tr: 'PDF, images, Word or text · 10 MB maximum.' }}</small>
             @if (erreur()) {
-              <p class="erreur" role="alert">{{ erreur() }}</p>
+              <p class="erreur" role="alert">{{ texteErreur() }}</p>
             }
-            <button class="btn petit" type="submit" [disabled]="!fichier || envoi()">{{ envoi() ? 'Envoi…' : 'Déposer le document' }}</button>
+            <button class="btn petit" type="submit" [disabled]="!fichier || envoi()">{{ envoi() ? ('Envoi…' | tr: 'Uploading…') : ('Déposer le document' | tr: 'Upload document') }}</button>
           </form>
 
           @for (d of documents(); track d.id) {
             <div class="ligne">
               <div class="infos">
                 <strong>{{ d.titre }}</strong>
-                <small>{{ d.date }} · {{ d.fichier }} · {{ taille(d.taille) }}</small>
+                <small>{{ d.date }} · {{ d.fichier }} · {{ taille(d.taille, i18n.langue()) }}</small>
               </div>
               <div class="actions">
                 @if (visualisable(d)) {
-                  <button type="button" class="btn secondaire petit" (click)="voir(d)">Voir</button>
+                  <button type="button" class="btn secondaire petit" (click)="voir(d)">{{ 'Voir' | tr: 'View' }}</button>
                 }
-                <button type="button" class="btn secondaire petit" (click)="telecharger(d)">Télécharger</button>
-                <button type="button" class="lien danger" (click)="supprimerDocument(d)">Supprimer</button>
+                <button type="button" class="btn secondaire petit" (click)="telecharger(d)">{{ 'Télécharger' | tr: 'Download' }}</button>
+                <button type="button" class="lien danger" (click)="supprimerDocument(d)">{{ 'Supprimer' | tr: 'Delete' }}</button>
               </div>
             </div>
           } @empty {
-            <p class="vide">Aucun document pour ce client.</p>
+            <p class="vide">{{ 'Aucun document pour ce client.' | tr: 'No documents for this client.' }}</p>
           }
         </section>
       </div>
     } @else {
       <div class="conteneur introuvable">
-        <p>Ce client n'existe pas (ou a été supprimé).</p>
-        <a class="btn petit" routerLink="/espace-pro">Retour à mes clients</a>
+        <p>{{ "Ce client n'existe pas (ou a été supprimé)." | tr: 'This client does not exist (or has been deleted).' }}</p>
+        <a class="btn petit" routerLink="/espace-pro">{{ 'Retour à mes clients' | tr: 'Back to my clients' }}</a>
       </div>
     }
   `,
@@ -162,6 +163,7 @@ export class FicheClient {
   /** Paramètre de route :id (withComponentInputBinding). */
   readonly id = input.required<string>();
 
+  protected readonly i18n = inject(I18n);
   private readonly data = inject(DataService);
   private readonly router = inject(Router);
 
@@ -183,7 +185,22 @@ export class FicheClient {
   // Dépôt de document
   protected titre = '';
   protected fichier: File | null = null;
-  protected readonly erreur = signal('');
+  protected readonly erreur = signal<'' | 'trop-gros' | 'stockage' | 'introuvable'>('');
+  protected readonly texteErreur = computed(() => {
+    switch (this.erreur()) {
+      case 'trop-gros':
+        return this.i18n.t('Ce fichier dépasse 10 Mo.', 'This file exceeds 10 MB.');
+      case 'stockage':
+        return this.i18n.t(
+          "Le document n'a pas pu être enregistré (espace de stockage insuffisant ?).",
+          'The document could not be saved (not enough storage space?).',
+        );
+      case 'introuvable':
+        return this.i18n.t('Fichier introuvable.', 'File not found.');
+      default:
+        return '';
+    }
+  });
   protected readonly envoi = signal(false);
 
   protected valide(): boolean {
@@ -213,12 +230,12 @@ export class FicheClient {
   }
 
   protected regenerer(id: string, nom: string): void {
-    if (!confirm(`Générer un nouveau code pour ${nom} ? L'ancien ne fonctionnera plus.`)) return;
+    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${nom} ? L'ancien ne fonctionnera plus.`, `Generate a new code for ${nom}? The old one will stop working.`))) return;
     this.data.regenererCode(id);
   }
 
   protected supprimerClient(id: string, nom: string): void {
-    if (!confirm(`Supprimer ${nom} ? Son espace et ses documents seront effacés.`)) return;
+    if (!confirm(this.i18n.t(`Supprimer ${nom} ? Son espace et ses documents seront effacés.`, `Delete ${nom}? Their client area and documents will be erased.`))) return;
     this.data.supprimerClient(id);
     void this.router.navigateByUrl('/espace-pro');
   }
@@ -227,7 +244,7 @@ export class FicheClient {
     this.fichier = (e.target as HTMLInputElement).files?.[0] ?? null;
     this.erreur.set('');
     if (this.fichier && this.fichier.size > TAILLE_MAX_DOCUMENT) {
-      this.erreur.set('Ce fichier dépasse 10 Mo.');
+      this.erreur.set('trop-gros');
       this.fichier = null;
     }
   }
@@ -242,22 +259,22 @@ export class FicheClient {
       (document.getElementById('fichier') as HTMLInputElement).value = '';
       this.erreur.set('');
     } catch {
-      this.erreur.set("Le document n'a pas pu être enregistré (espace de stockage insuffisant ?).");
+      this.erreur.set('stockage');
     } finally {
       this.envoi.set(false);
     }
   }
 
   protected async voir(d: Document): Promise<void> {
-    if (!(await this.data.visualiser(d))) this.erreur.set('Fichier introuvable.');
+    if (!(await this.data.visualiser(d))) this.erreur.set('introuvable');
   }
 
   protected async telecharger(d: Document): Promise<void> {
-    if (!(await this.data.telecharger(d))) this.erreur.set('Fichier introuvable.');
+    if (!(await this.data.telecharger(d))) this.erreur.set('introuvable');
   }
 
   protected async supprimerDocument(d: Document): Promise<void> {
-    if (!confirm(`Supprimer « ${d.titre} » ? Le client n'y aura plus accès.`)) return;
+    if (!confirm(this.i18n.t(`Supprimer « ${d.titre} » ? Le client n'y aura plus accès.`, `Delete “${d.titre}”? The client will no longer have access to it.`))) return;
     await this.data.supprimerDocument(d.id);
   }
 }

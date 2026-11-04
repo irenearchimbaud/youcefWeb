@@ -27,8 +27,10 @@ export interface Document {
 export const TYPES_DOCUMENT = '.pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.txt';
 export const TAILLE_MAX_DOCUMENT = 10 * 1024 * 1024;
 
-export const formaterTaille = (octets: number): string =>
-  octets < 1024 * 1024 ? `${Math.max(1, Math.round(octets / 1024))} Ko` : `${(octets / 1024 / 1024).toFixed(1)} Mo`;
+export const formaterTaille = (octets: number, langue: 'fr' | 'en' = 'fr'): string => {
+  const [ko, mo] = langue === 'en' ? ['KB', 'MB'] : ['Ko', 'Mo'];
+  return octets < 1024 * 1024 ? `${Math.max(1, Math.round(octets / 1024))} ${ko}` : `${(octets / 1024 / 1024).toFixed(1)} ${mo}`;
+};
 
 /** Les PDF, images et textes s'affichent dans le navigateur ; le reste ne peut que se télécharger. */
 export const estVisualisable = (type: string): boolean =>
@@ -45,10 +47,10 @@ export interface Rdv {
   clientId?: string;
 }
 
-export const formaterCreneau = (debut: string, fin: string): string => {
-  const jour = new Date(debut).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
+export const formaterCreneau = (debut: string, fin: string, locale = 'fr-FR'): string => {
+  const jour = new Date(debut).toLocaleDateString(locale, { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Europe/Paris' });
   const heure = (iso: string) =>
-    new Date(iso).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
+    new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Paris' });
   return `${jour}, ${heure(debut)} – ${heure(fin)}`;
 };
 
