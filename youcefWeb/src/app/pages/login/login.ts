@@ -19,23 +19,25 @@ import { TrPipe } from '../../core/i18n';
         <form (ngSubmit)="valider()">
           <span class="sur-titre">{{ 'Espace membre' | tr: 'Member area' }}</span>
           <h1>{{ 'Bon retour' | tr: 'Welcome back' }}</h1>
-          <p class="intro">{{ 'Connectez-vous avec votre e-mail et votre mot de passe. Première visite ? Utilisez le code de première connexion remis par Youcef.' | tr: 'Sign in with your email and password. First visit? Use the first-login code provided by Youcef.' }}</p>
+          <p class="intro">{{ "Utilisez l'identifiant et le code d'accès remis par Youcef." | tr: 'Use the username and access code provided by Youcef.' }}</p>
 
-          <label for="email">{{ 'E-mail' | tr: 'Email' }}</label>
-          <input id="email" name="email" type="email" [(ngModel)]="email" autocomplete="username" required />
+          <label for="id">{{ 'Identifiant' | tr: 'Username' }}</label>
+          <input id="id" name="id" [(ngModel)]="identifiant" autocomplete="username" required />
 
-          <label for="mdp">{{ 'Mot de passe ou code de première connexion' | tr: 'Password or first-login code' }}</label>
-          <input id="mdp" name="mdp" type="password" [(ngModel)]="motDePasse" autocomplete="current-password" required />
+          <label for="code">{{ "Code d'accès" | tr: 'Access code' }}</label>
+          <input id="code" name="code" type="password" [(ngModel)]="code" autocomplete="current-password" required />
 
-          @if (erreur() === 'identifiants') {
-            <p class="erreur" role="alert">{{ 'E-mail ou mot de passe incorrect.' | tr: 'Incorrect email or password.' }}</p>
-          } @else if (erreur() === 'reseau') {
-            <p class="erreur" role="alert">{{ 'Connexion impossible pour le moment. Réessayez dans un instant.' | tr: 'Unable to sign in right now. Please try again in a moment.' }}</p>
+          @if (erreur()) {
+            <p class="erreur" role="alert">{{ 'Identifiant ou code incorrect.' | tr: 'Incorrect username or access code.' }}</p>
           }
 
-          <button class="btn large" type="submit" [disabled]="envoi()">{{ envoi() ? ('Connexion…' | tr: 'Signing in…') : ('Se connecter' | tr: 'Sign in') }}</button>
+          <button class="btn large" type="submit">{{ 'Se connecter' | tr: 'Sign in' }}</button>
 
-          <a routerLink="/mot-de-passe-oublie" class="oublie">{{ 'Mot de passe oublié ?' | tr: 'Forgot your password?' }}</a>
+          <div class="demo">
+            <span>{{ 'Comptes de démonstration' | tr: 'Demo accounts' }}</span>
+            <button type="button" (click)="remplir('marie-dupont', 'K7M2-QX9P')">{{ 'Espace client' | tr: 'Client area' }}</button>
+            <button type="button" (click)="remplir('youcef', 'pro123')">{{ 'Espace Youcef' | tr: 'Youcef's area' }}</button>
+          </div>
 
           <a routerLink="/" class="retour">{{ "← Retour à l'accueil" | tr: '← Back to home' }}</a>
         </form>
@@ -79,7 +81,30 @@ import { TrPipe } from '../../core/i18n';
     .btn { margin-top: 1.6rem; }
     .erreur { color: var(--danger); margin: 0.9rem 0 0; font-size: 0.9rem; font-weight: 500; }
 
-    .oublie { display: block; margin-top: 1.1rem; font-size: 0.88rem; color: var(--bleu-profond); }
+    .demo {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1.8rem;
+      padding-top: 1.4rem;
+      border-top: 1px solid var(--champagne);
+      font-size: 0.8rem;
+      color: var(--texte-doux);
+
+      span { width: 100%; }
+      button {
+        padding: 0.35rem 0.9rem;
+        border: 1px solid var(--champagne);
+        border-radius: 999px;
+        background: var(--blanc);
+        font: 500 0.82rem var(--sans);
+        color: var(--bleu-profond);
+        cursor: pointer;
+        transition: background 0.2s, border-color 0.2s;
+        &:hover { background: var(--bleu-diamant); border-color: var(--bleu-clair); }
+      }
+    }
     .retour { display: inline-block; margin-top: 1.8rem; font-size: 0.88rem; color: var(--texte-doux); text-decoration: none; &:hover { color: var(--bleu-profond); } }
 
     @media (max-width: 800px) {
@@ -91,22 +116,17 @@ import { TrPipe } from '../../core/i18n';
 export class Login {
   private readonly auth = inject(AuthService);
 
-  protected email = '';
-  protected motDePasse = '';
-  protected readonly erreur = signal<'identifiants' | 'reseau' | null>(null);
-  protected readonly envoi = signal(false);
+  protected identifiant = '';
+  protected code = '';
+  protected readonly erreur = signal(false);
 
-  protected async valider(): Promise<void> {
-    if (this.envoi()) return;
-    this.envoi.set(true);
-    this.erreur.set(null);
-    try {
-      const r = await this.auth.connexion(this.email, this.motDePasse);
-      if (r !== 'ok') this.erreur.set(r === 'identifiants' ? 'identifiants' : 'reseau');
-    } catch {
-      this.erreur.set('reseau');
-    } finally {
-      this.envoi.set(false);
-    }
+  protected remplir(identifiant: string, code: string): void {
+    this.identifiant = identifiant;
+    this.code = code;
+    this.erreur.set(false);
+  }
+
+  protected valider(): void {
+    this.erreur.set(!this.auth.connexion(this.identifiant, this.code));
   }
 }

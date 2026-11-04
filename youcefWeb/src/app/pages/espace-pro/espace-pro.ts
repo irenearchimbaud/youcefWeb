@@ -1,9 +1,8 @@
-import { Component, PLATFORM_ID, inject, signal } from '@angular/core';
+import { Component, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { I18n, TrPipe } from '../../core/i18n';
-import { AuthService } from '../../core/auth.service';
 import { DataService } from '../../core/data.service';
 import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models';
 
@@ -58,22 +57,17 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
           <form class="ajout" (ngSubmit)="ajouterClient()">
             <label for="nom">{{ 'Nouveau client' | tr: 'New client' }}</label>
             <input id="nom" name="nom" [(ngModel)]="nouveauNom" [placeholder]="'Prénom Nom' | tr: 'First name Last name'" required />
-            <label for="email">{{ 'E-mail du client' | tr: 'Client email' }}</label>
-            <input id="email" name="email" type="email" [(ngModel)]="nouvelEmail" placeholder="prenom@exemple.fr" autocomplete="off" required />
             <label for="solde">{{ 'Séances achetées' | tr: 'Sessions purchased' }}</label>
             <input id="solde" name="solde" type="number" min="1" max="200" [(ngModel)]="nouveauSolde" required />
-            <button class="btn petit" type="submit" [disabled]="!nouveauNom.trim() || !nouvelEmail.trim() || nouveauSolde < 1 || envoi()">{{ "Créer l'espace" | tr: 'Create client area' }}</button>
-            @if (erreurAjout()) {
-              <p class="erreur" role="alert">{{ erreurAjout() }}</p>
-            }
+            <button class="btn petit" type="submit" [disabled]="!nouveauNom.trim() || nouveauSolde < 1">{{ "Créer l'espace" | tr: 'Create client area' }}</button>
           </form>
 
           @if (cree(); as c) {
             <div class="acces" role="status">
-              <strong>{{ c.nouveau ? ('Espace créé pour' | tr: 'Client area created for') : ('Nouveau code pour' | tr: 'New code for') }} {{ c.nom }}</strong>
-              <span>{{ 'E-mail :' | tr: 'Email:' }} <code>{{ c.email }}</code></span>
-              <span>{{ 'Code de première connexion :' | tr: 'First-login code:' }} <code>{{ c.code }}</code></span>
-              <small>{{ "À transmettre au client. Ce code ne sera plus jamais affiché : le client choisira son propre mot de passe dès sa première connexion, que vous ne connaîtrez pas." | tr: 'To be passed on to the client. This code will never be shown again: the client will choose their own password at first sign-in, which you will not know.' }}</small>
+              <strong>{{ 'Espace créé pour' | tr: 'Client area created for' }} {{ c.nom }}</strong>
+              <span>{{ 'Identifiant :' | tr: 'Username:' }} <code>{{ c.identifiant }}</code></span>
+              <span>{{ "Code d'accès :" | tr: 'Access code:' }} <code>{{ c.code }}</code></span>
+              <small>{{ 'À transmettre au client.' | tr: 'To be passed on to the client.' }}</small>
             </div>
           }
 
@@ -82,7 +76,7 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
               <span class="avatar">{{ c.nom.charAt(0) }}</span>
               <div class="corps">
                 <strong>{{ c.nom }}</strong>
-                <small>{{ c.email }}</small>
+                <small>{{ c.identifiant }} · <code>{{ c.code }}</code></small>
               </div>
               <span class="solde"><strong>{{ c.solde }}</strong> {{ 'séance(s)' | tr: 'session(s)' }} · {{ data.documentsDe(c.id).length }} {{ 'doc(s)' | tr: 'doc(s)' }}</span>
               <div class="outils">
@@ -199,22 +193,17 @@ import { Rdv, Utilisateur, chargerRdv, formaterCreneau } from '../../core/models
 export class EspacePro {
   protected readonly data = inject(DataService);
   protected readonly i18n = inject(I18n);
-  private readonly auth = inject(AuthService);
   private readonly navigateur = isPlatformBrowser(inject(PLATFORM_ID));
 
-  protected readonly clients = this.data.clients;
+  protected readonly clients = computed(() => this.data.utilisateurs().filter((u) => u.role === 'client'));
   protected readonly rdv = signal<Rdv[]>([]);
   protected readonly configure = signal<boolean | null>(null);
   protected readonly creneau = formaterCreneau;
   protected readonly erreurAgenda = signal(false);
 
   protected nouveauNom = '';
-  protected nouvelEmail = '';
   protected nouveauSolde = 10;
-  protected readonly envoi = signal(false);
-  protected readonly erreurAjout = signal('');
-  /** Code de première connexion, affiché une seule fois puis oublié. */
-  protected readonly cree = signal<{ nom: string; email: string; code: string; nouveau: boolean } | null>(null);
+  protected readonly cree = signal<Utilisateur | null>(null);
 
   constructor() {
     if (this.navigateur) void this.chargerRdv();
@@ -224,46 +213,28 @@ export class EspacePro {
     return (r.clientId && this.data.utilisateur(r.clientId)?.nom) || r.invite;
   }
 
-  protected async ajouterClient(): Promise<void> {
+  protected ajouterClient(): void {
     const nom = this.nouveauNom.trim();
-    const email = this.nouvelEmail.trim();
-    if (!nom || !email || this.nouveauSolde < 1 || this.envoi()) return;
-    this.envoi.set(true);
-    this.erreurAjout.set('');
-    try {
-      const { client, code } = await this.data.ajouterClient(nom, email, Math.floor(this.nouveauSolde));
-      this.cree.set({ nom: client.nom, email: client.email, code, nouveau: true });
-      this.nouveauNom = '';
-      this.nouvelEmail = '';
-    } catch (e) {
-      this.erreurAjout.set((e as Error).message || this.i18n.t('Création impossible.', 'Could not create the account.'));
-    } finally {
-      this.envoi.set(false);
-    }
+    if (!nom || this.nouveauSolde < 1) return;
+    this.cree.set(this.data.ajouterClient(nom, Math.floor(this.nouveauSolde)));
+    this.nouveauNom = '';
   }
 
-  protected async regenerer(c: Utilisateur): Promise<void> {
-    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${c.nom} ? Son mot de passe actuel ne fonctionnera plus et il devra en choisir un nouveau.`, `Generate a new code for ${c.nom}? Their current password will stop working and they will have to choose a new one.`))) return;
-    try {
-      this.cree.set({ nom: c.nom, email: c.email, code: await this.data.regenererCode(c.id), nouveau: false });
-    } catch {
-      alert(this.i18n.t('Impossible de générer un nouveau code.', 'Could not generate a new code.'));
-    }
+  protected regenerer(c: Utilisateur): void {
+    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${c.nom} ? L'ancien ne fonctionnera plus.`, `Generate a new code for ${c.nom}? The old one will stop working.`))) return;
+    this.data.regenererCode(c.id);
+    this.cree.set(null);
   }
 
-  protected async supprimer(c: Utilisateur): Promise<void> {
-    if (!confirm(this.i18n.t(`Supprimer ${c.nom} ? Son compte et ses documents seront effacés définitivement.`, `Delete ${c.nom}? Their account and documents will be permanently erased.`))) return;
-    try {
-      await this.data.supprimerClient(c.id);
-      this.cree.set(null);
-    } catch {
-      alert(this.i18n.t('Suppression impossible.', 'Could not delete the client.'));
-    }
+  protected supprimer(c: Utilisateur): void {
+    if (!confirm(this.i18n.t(`Supprimer ${c.nom} ? Son espace, ses documents et ses demandes seront effacés.`, `Delete ${c.nom}? Their client area, documents and requests will be erased.`))) return;
+    this.data.supprimerClient(c.id);
+    this.cree.set(null);
   }
 
   private async chargerRdv(): Promise<void> {
     try {
-      const r = await chargerRdv(await this.auth.jeton());
+      const r = await chargerRdv();
       this.configure.set(r.configure);
       this.rdv.set(r.rdv);
       this.erreurAgenda.set(false);

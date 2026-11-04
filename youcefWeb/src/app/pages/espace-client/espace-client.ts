@@ -219,26 +219,18 @@ export class EspaceClient {
     // Calendly prévient la page parente une fois la réservation faite : on décompte une séance et on rafraîchit la liste.
     const ecouteur = (e: MessageEvent) => {
       if (e.origin !== 'https://calendly.com' || e.data?.event !== 'calendly.event_scheduled') return;
-      this.retour.set('reservee');
-      void this.decompter();
+      this.data.consommerSeance(this.utilisateur().id);
+      this.retour.set('Séance réservée : une confirmation vous est envoyée par e-mail.');
+      void this.charger(true);
     };
     window.addEventListener('message', ecouteur);
     inject(DestroyRef).onDestroy(() => window.removeEventListener('message', ecouteur));
   }
 
-  /** Le serveur vérifie la réservation auprès de Calendly (qui peut mettre un instant à la publier) puis décompte la séance. */
-  private async decompter(): Promise<void> {
-    for (let essai = 0; essai < 3; essai++) {
-      if ((await this.data.consommerSeance()) > 0) break;
-      await new Promise((ok) => setTimeout(ok, 2500));
-    }
-    await this.charger(true);
-  }
-
   protected async charger(frais = false): Promise<void> {
     this.chargementRdv.set(true);
     try {
-      this.rdv.set((await chargerRdv(await this.auth.jeton(), this.utilisateur().id, frais)).rdv);
+      this.rdv.set((await chargerRdv(this.utilisateur().id, frais)).rdv);
       this.erreurRdv.set(false);
     } catch {
       this.erreurRdv.set(true);

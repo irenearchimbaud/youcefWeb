@@ -15,7 +15,7 @@ import { Document, TAILLE_MAX_DOCUMENT, TYPES_DOCUMENT, estVisualisable, formate
           <a class="retour" routerLink="/espace-pro">{{ '← Mes clients' | tr: '← My clients' }}</a>
           <span class="sur-titre">{{ 'Fiche client' | tr: 'Client file' }}</span>
           <h1>{{ c.nom }}</h1>
-          <p class="acces">{{ c.email }}</p>
+          <p class="acces">{{ 'Identifiant :' | tr: 'Username:' }} <code>{{ c.identifiant }}</code> · {{ "Code d'accès :" | tr: 'Access code:' }} <code>{{ c.code }}</code></p>
         </div>
       </section>
 
@@ -50,14 +50,6 @@ import { Document, TAILLE_MAX_DOCUMENT, TYPES_DOCUMENT, estVisualisable, formate
           }
           @if (message()) {
             <p class="succes" role="status">{{ 'Nombre de séances mis à jour.' | tr: 'Number of sessions updated.' }}</p>
-          }
-
-          @if (nouveauCode()) {
-            <div class="confirmation" role="status">
-              <strong>{{ 'Nouveau code de première connexion' | tr: 'New first-login code' }}</strong>
-              <p><code>{{ nouveauCode() }}</code></p>
-              <small>{{ "À transmettre au client. Ce code ne sera plus jamais affiché : le client choisira un nouveau mot de passe à sa prochaine connexion." | tr: 'To be passed on to the client. This code will never be shown again: the client will choose a new password at their next sign-in.' }}</small>
-            </div>
           }
 
           <div class="outils">
@@ -189,8 +181,6 @@ export class FicheClient {
   protected readonly etape = signal<'repos' | 'saisie' | 'confirmation'>('repos');
   protected nouveauSolde = 0;
   protected readonly message = signal('');
-  /** Code de première connexion, affiché une seule fois puis oublié. */
-  protected readonly nouveauCode = signal('');
 
   // Dépôt de document
   protected titre = '';
@@ -228,38 +218,26 @@ export class FicheClient {
     this.etape.set('confirmation');
   }
 
-  protected async confirmer(id: string): Promise<void> {
+  protected confirmer(id: string): void {
     if (!this.valide()) return;
-    try {
-      await this.data.definirSolde(id, this.nouveauSolde);
-      this.message.set('Nombre de séances mis à jour.');
-    } catch {
-      alert(this.i18n.t('La modification a échoué. Réessayez.', 'The change failed. Please try again.'));
-    }
+    this.data.definirSolde(id, this.nouveauSolde);
     this.etape.set('repos');
+    this.message.set('Nombre de séances mis à jour.');
   }
 
   protected annuler(): void {
     this.etape.set('repos');
   }
 
-  protected async regenerer(id: string, nom: string): Promise<void> {
-    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${nom} ? Son mot de passe actuel ne fonctionnera plus et il devra en choisir un nouveau.`, `Generate a new code for ${nom}? Their current password will stop working and they will have to choose a new one.`))) return;
-    try {
-      this.nouveauCode.set(await this.data.regenererCode(id));
-    } catch {
-      alert(this.i18n.t('Impossible de générer un nouveau code.', 'Could not generate a new code.'));
-    }
+  protected regenerer(id: string, nom: string): void {
+    if (!confirm(this.i18n.t(`Générer un nouveau code pour ${nom} ? L'ancien ne fonctionnera plus.`, `Generate a new code for ${nom}? The old one will stop working.`))) return;
+    this.data.regenererCode(id);
   }
 
-  protected async supprimerClient(id: string, nom: string): Promise<void> {
-    if (!confirm(this.i18n.t(`Supprimer ${nom} ? Son compte et ses documents seront effacés définitivement.`, `Delete ${nom}? Their account and documents will be permanently erased.`))) return;
-    try {
-      await this.data.supprimerClient(id);
-      void this.router.navigateByUrl('/espace-pro');
-    } catch {
-      alert(this.i18n.t('Suppression impossible.', 'Could not delete the client.'));
-    }
+  protected supprimerClient(id: string, nom: string): void {
+    if (!confirm(this.i18n.t(`Supprimer ${nom} ? Son espace et ses documents seront effacés.`, `Delete ${nom}? Their client area and documents will be erased.`))) return;
+    this.data.supprimerClient(id);
+    void this.router.navigateByUrl('/espace-pro');
   }
 
   protected choisir(e: Event): void {
@@ -297,10 +275,6 @@ export class FicheClient {
 
   protected async supprimerDocument(d: Document): Promise<void> {
     if (!confirm(this.i18n.t(`Supprimer « ${d.titre} » ? Le client n'y aura plus accès.`, `Delete “${d.titre}”? The client will no longer have access to it.`))) return;
-    try {
-      await this.data.supprimerDocument(d);
-    } catch {
-      alert(this.i18n.t('Suppression impossible.', 'Could not delete the document.'));
-    }
+    await this.data.supprimerDocument(d.id);
   }
 }
