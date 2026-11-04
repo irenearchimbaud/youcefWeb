@@ -16,7 +16,7 @@ import { RouterLink } from '@angular/router';
             identité profonde, vos valeurs et vos aspirations.
           </p>
           <div class="actions">
-            <a routerLink="/login" class="btn">Demander un rendez-vous</a>
+            <a routerLink="/devis" class="btn">Demander un devis</a>
             <a routerLink="/" fragment="accompagnements" class="btn secondaire">Découvrir les accompagnements</a>
           </div>
         </div>
@@ -104,8 +104,8 @@ import { RouterLink } from '@angular/router';
                   <li>{{ p }}</li>
                 }
               </ul>
-              <a routerLink="/login" class="btn" [class.secondaire]="!o.vedette" [class.clair]="o.vedette">
-                Demander un rendez-vous
+              <a routerLink="/devis" [queryParams]="{ formule: o.titre }" class="btn" [class.secondaire]="!o.vedette" [class.clair]="o.vedette">
+                Demander un devis
               </a>
             </article>
           }
@@ -451,9 +451,9 @@ export class Home {
   ];
 
   protected readonly etapes = [
-    { titre: 'Je me connecte', texte: 'Je me connecte à mon espace personnel et sécurisé.' },
-    { titre: 'Je fais ma demande', texte: 'J\'indique la formule et ce qui m\'amène.' },
-    { titre: 'Youcef me répond', texte: 'Il accepte la demande et me propose un créneau en visio.' },
+    { titre: 'Je demande un devis', texte: 'J\'indique la formule et ce qui m\'amène.' },
+    { titre: 'Youcef me répond', texte: 'Il étudie ma demande et me propose un créneau en visio.' },
+    { titre: 'Je reçois mon accès', texte: 'Youcef crée mon espace personnel et sécurisé.' },
     { titre: 'Je suis accompagné', texte: 'Séances chaque semaine, documents et comptes rendus dans mon espace.' },
   ];
 }
