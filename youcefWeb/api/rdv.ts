@@ -12,6 +12,6 @@ export default async function handler(req: any, res: any): Promise<void> {
     res.status(200).json({ configure: true, rdv: typeof client === 'string' ? rdv.filter((r) => r.clientId === client) : rdv });
   } catch (e) {
     console.error('Lecture de Calendly impossible', e);
-    res.status(502).json({ erreur: 'Calendly indisponible.' });
+    res.status(502).json({ erreur: 'Calendly indisponible.', code: /^Calendly (\d{3})/.exec(String((e as Error)?.message))?.[1] ?? 'inconnu' });
   }
 }
