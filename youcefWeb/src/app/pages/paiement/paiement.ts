@@ -1,6 +1,7 @@
-import { Component, signal } from '@angular/core';
-import { RouterLink } from '@angular/router';
-import { TrPipe } from '../../core/i18n';
+import { Component, inject, signal } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
+import { I18n, TrPipe } from '../../core/i18n';
+import { trouverFormation } from '../../core/formations';
 
 @Component({
   selector: 'app-paiement',
@@ -8,7 +9,11 @@ import { TrPipe } from '../../core/i18n';
   template: `
     <main class="page">
       <div class="conteneur">
-        <a routerLink="/espace-client" class="retour">{{ '← Retour à mon espace' | tr: '← Back to my space' }}</a>
+        @if (formation) {
+          <a [routerLink]="['/formations', formation.slug]" class="retour">{{ '← Retour à la formation' | tr: '← Back to the course' }}</a>
+        } @else {
+          <a routerLink="/espace-client" class="retour">{{ '← Retour à mon espace' | tr: '← Back to my space' }}</a>
+        }
 
         @if (paye()) {
           <section class="confirmation carte" role="status">
@@ -21,7 +26,7 @@ import { TrPipe } from '../../core/i18n';
                   | tr: 'This is a demo: no real payment was made and no bank details were sent.'
               }}
             </p>
-            <a routerLink="/espace-client" class="btn">{{ 'Retour à mon espace' | tr: 'Back to my space' }}</a>
+            <a routerLink="/" class="btn">{{ "Retour à l'accueil" | tr: 'Back to home' }}</a>
           </section>
         } @else {
           <section class="entete">
@@ -34,12 +39,12 @@ import { TrPipe } from '../../core/i18n';
             <section class="carte commande">
               <h2>{{ 'Récapitulatif' | tr: 'Order summary' }}</h2>
               <div class="ligne">
-                <span>{{ 'Séance de coaching · exemple' | tr: 'Coaching session · example' }}</span>
-                <strong>80,00 €</strong>
+                <span>{{ libelle() }}</span>
+                <strong>{{ montantAffiche() }}</strong>
               </div>
               <div class="total">
                 <span>{{ 'Total à régler' | tr: 'Total due' }}</span>
-                <strong>80,00 €</strong>
+                <strong>{{ montantAffiche() }}</strong>
               </div>
               <p class="note">{{ 'Tarif fictif de démonstration, à adapter.' | tr: 'Fictional demo price, to be adjusted.' }}</p>
             </section>
@@ -74,7 +79,7 @@ import { TrPipe } from '../../core/i18n';
                   </div>
                 </div>
 
-                <button class="btn large" type="submit">{{ 'Simuler le paiement de 80,00 €' | tr: 'Simulate payment of €80.00' }}</button>
+                <button class="btn large" type="submit">{{ 'Simuler le paiement de' | tr: 'Simulate payment of' }} {{ montantAffiche() }}</button>
               </form>
             </section>
           </div>
@@ -115,6 +120,15 @@ import { TrPipe } from '../../core/i18n';
   `,
 })
 export class Paiement {
+  private readonly i18n = inject(I18n);
+  protected readonly formation = trouverFormation(inject(ActivatedRoute).snapshot.queryParamMap.get('formation'));
+  private readonly montant = this.formation?.prix ?? 80;
+  protected readonly montantAffiche = () => `${this.montant.toFixed(2).replace('.', ',')} €`;
+  protected readonly libelle = () =>
+    this.formation
+      ? this.i18n.t(this.formation.titre[0], this.formation.titre[1])
+      : this.i18n.t('Séance de coaching · exemple', 'Coaching session · example');
+
   protected readonly paye = signal(false);
 
   protected simuler(event: SubmitEvent): void {

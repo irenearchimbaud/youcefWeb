@@ -22,9 +22,9 @@ export const routes: Routes = [
     canActivate: [roleGuard('client')],
     loadComponent: () => import('./pages/espace-client/espace-client').then((m) => m.EspaceClient),
   },
+  { path: 'formations/:slug', loadComponent: () => import('./pages/formation/formation').then((m) => m.Formation) },
   {
     path: 'paiement',
-    canActivate: [roleGuard('client')],
     loadComponent: () => import('./pages/paiement/paiement').then((m) => m.Paiement),
   },
   {

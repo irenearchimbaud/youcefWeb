@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { I18n, TrPipe } from '../../core/i18n';
+import { FORMATIONS } from '../../core/formations';
 
 @Component({
   selector: 'app-home',
@@ -102,6 +103,32 @@ import { I18n, TrPipe } from '../../core/i18n';
               <a routerLink="/devis" [queryParams]="{ formule: o.cle }" class="btn" [class.secondaire]="!o.vedette" [class.clair]="o.vedette">
                 {{ 'Demander un devis' | tr: 'Request a quote' }}
               </a>
+            </article>
+          }
+        </div>
+      </div>
+    </section>
+
+    <!-- FORMATIONS -->
+    <section id="formations" class="bloc formations">
+      <div class="conteneur">
+        <div class="entete centre">
+          <span class="sur-titre">{{ 'Les formations' | tr: 'The courses' }}</span>
+          <h2>{{ 'Découvrez nos' | tr: 'Discover our' }} <em>{{ 'formations' | tr: 'courses' }}</em></h2>
+          <p>{{ 'Des formations en ligne à suivre à votre rythme, pour avancer seul(e) ou en complément de votre accompagnement.' | tr: 'Online courses to follow at your own pace, to progress on your own or alongside your coaching.' }}</p>
+        </div>
+        <div class="formations-grille">
+          @for (f of formations; track $index) {
+            <article class="carte formation">
+              <span class="niveau">{{ f.niveau() }}</span>
+              <h3>{{ f.titre() }}</h3>
+              <p>{{ f.texte() }}</p>
+              <div class="meta">
+                <span>{{ f.modules() }}</span>
+                <span>{{ f.duree() }}</span>
+                <span class="prix">{{ f.prix }} €</span>
+              </div>
+              <a [routerLink]="['/formations', f.slug]" class="btn secondaire">{{ 'En savoir plus' | tr: 'Learn more' }}</a>
             </article>
           }
         </div>
@@ -318,6 +345,45 @@ import { I18n, TrPipe } from '../../core/i18n';
       white-space: nowrap;
     }
 
+    /* Formations */
+    .formations-grille {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1.6rem;
+    }
+    .formation {
+      display: flex;
+      flex-direction: column;
+      transition: transform 0.25s, box-shadow 0.25s;
+      &:hover { transform: translateY(-6px); box-shadow: var(--ombre-forte); }
+      h3 { font-size: 1.5rem; }
+      p { color: var(--texte-doux); font-size: 0.95rem; flex: 1; }
+      .btn { align-self: flex-start; }
+    }
+    .niveau {
+      align-self: flex-start;
+      margin-bottom: 0.9rem;
+      padding: 0.25rem 0.8rem;
+      border-radius: 999px;
+      background: var(--bleu-diamant);
+      color: var(--bleu-profond);
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+    .meta .prix { margin-left: auto; color: var(--bleu-profond); }
+    .meta {
+      display: flex;
+      gap: 1.2rem;
+      margin-bottom: 1.4rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid rgba(10, 29, 53, 0.08);
+      font-size: 0.85rem;
+      color: var(--champagne-fonce);
+      font-weight: 600;
+    }
+
     /* Parcours */
     .parcours { background: var(--ivoire); }
     .etapes {
@@ -453,6 +519,16 @@ export class Home {
       vedette: false,
     },
   ];
+
+  protected readonly formations = FORMATIONS.map((f) => ({
+    slug: f.slug,
+    niveau: this.tx(...f.niveau),
+    titre: this.tx(...f.titre),
+    texte: this.tx(...f.resume),
+    modules: this.tx(`${f.modules} modules`, `${f.modules} modules`),
+    duree: this.tx(`${f.heures} h de vidéo`, `${f.heures} h of video`),
+    prix: f.prix,
+  }));
 
   protected readonly etapes = [
     { titre: this.tx('Je demande un devis', 'I request a quote'), texte: this.tx('J\'indique la formule et ce qui m\'amène.', 'I choose a programme and tell you what brings me here.') },
