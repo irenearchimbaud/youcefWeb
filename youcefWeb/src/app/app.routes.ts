@@ -23,6 +23,11 @@ export const routes: Routes = [
     loadComponent: () => import('./pages/espace-client/espace-client').then((m) => m.EspaceClient),
   },
   {
+    path: 'paiement',
+    canActivate: [roleGuard('client')],
+    loadComponent: () => import('./pages/paiement/paiement').then((m) => m.Paiement),
+  },
+  {
     path: 'espace-pro',
     canActivate: [roleGuard('pro')],
     loadComponent: () => import('./pages/espace-pro/espace-pro').then((m) => m.EspacePro),

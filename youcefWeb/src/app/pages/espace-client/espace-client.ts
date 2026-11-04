@@ -1,6 +1,7 @@
 import { Component, DestroyRef, PLATFORM_ID, computed, inject, signal } from '@angular/core';
 import { isPlatformBrowser } from '@angular/common';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { RouterLink } from '@angular/router';
 import { I18n, TrPipe } from '../../core/i18n';
 import { AuthService } from '../../core/auth.service';
 import { CALENDLY_URL } from '../../core/config';
@@ -9,7 +10,7 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
 
 @Component({
   selector: 'app-espace-client',
-  imports: [TrPipe],
+  imports: [RouterLink, TrPipe],
   template: `
     <section class="bandeau">
       <div class="conteneur">
@@ -78,6 +79,12 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
               }
             }
           }
+        </section>
+
+        <section class="carte paiement">
+          <h2>{{ 'Paiement' | tr: 'Payment' }}</h2>
+          <p class="aide">{{ 'Retrouvez un exemple de règlement en ligne pour vos séances.' | tr: 'See an example of online payment for your sessions.' }}</p>
+          <a routerLink="/paiement" class="btn">{{ 'Accéder au paiement' | tr: 'Go to payment' }}</a>
         </section>
       </div>
 
@@ -157,6 +164,7 @@ import { Document, Rdv, chargerRdv, estVisualisable, formaterCreneau, formaterTa
 
     .demande { position: sticky; top: 6rem; }
     .aide { color: var(--texte-doux); font-size: 0.93rem; }
+    .paiement .btn { margin-top: 0.4rem; }
     .retour { margin: 1rem 0 0; font-weight: 600; color: var(--succes); font-size: 0.92rem; }
 
     .calendly { width: 100%; height: 680px; border: 0; border-radius: 14px; &.cache { height: 0; } }
